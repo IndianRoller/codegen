@@ -6,15 +6,20 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Properties;
 
-import com.ir.cgtool.DBInfo;
+import com.ir.cgtool.CGToolInfo;
 
 public class ConnectionUtil {
     
 	public static Connection getConnection() throws Exception {
-		DBInfo dbInfo = DBInfo.getInstance();
-		Class.forName(dbInfo.getDriver());
-		return DriverManager.getConnection(dbInfo.getUrl(), dbInfo.getUser(), dbInfo.getPassword());
+		Properties cgToolProperties = CGToolInfo.getInstance().getCgToolProperties();
+		
+		Class.forName(cgToolProperties.getProperty("jdbc.driver"));
+		
+		return DriverManager.getConnection(cgToolProperties.getProperty("jdbc.url"),
+										   cgToolProperties.getProperty("jdbc.username"), 
+										   cgToolProperties.getProperty("jdbc.password"));
 	}
 
 	public static void closeConnection(Connection connection) throws SQLException {
