@@ -42,6 +42,11 @@ public class CodeGenUtil {
  
 
 	public static   String getJavaClassName(String input) {
+		
+		if(!input.contains("_")){
+			return toUpperCase(input.toLowerCase(), 0);
+		}
+		
 		StringBuffer sb = new StringBuffer();
 		StringTokenizer st = new  StringTokenizer(input,"_");
 		int i=0;
