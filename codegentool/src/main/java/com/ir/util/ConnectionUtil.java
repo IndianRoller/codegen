@@ -7,12 +7,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-public class ConnectionUtil {
+import com.ir.cgtool.DBInfo;
 
+public class ConnectionUtil {
     
-	public static Connection getConnection() throws ClassNotFoundException, SQLException {
-		Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-		return DriverManager.getConnection("jdbc:sqlserver://INHYNSVENTURUP1:1433;database=apceps;", "apceps", "apceps");
+	public static Connection getConnection() throws Exception {
+		DBInfo dbInfo = DBInfo.getInstance();
+		Class.forName(dbInfo.getDriver());
+		return DriverManager.getConnection(dbInfo.getUrl(), dbInfo.getUser(), dbInfo.getPassword());
 	}
 
 	public static void closeConnection(Connection connection) throws SQLException {
@@ -52,7 +54,7 @@ public class ConnectionUtil {
 			psmt.close();
 	}
 	
-	public static void main(String args[]) throws ClassNotFoundException, SQLException {
+	public static void main(String args[]) throws Exception {
 		Connection connection = getConnection();
  		closeConnection(connection);
 	}

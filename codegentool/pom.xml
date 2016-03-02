@@ -6,17 +6,9 @@
 	<packaging>jar</packaging>
 	<version>1.0-SNAPSHOT</version>
 	<name>codegentool</name>
-	<url>http://maven.apache.org</url>
+	<url>https://github.com/IndianRoller/codegen</url>
 
 	<dependencies>
-
-<!-- 		<dependency>
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-core</artifactId>
-			<version>4.2.5.RELEASE</version>
-		</dependency>
- -->
-
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
@@ -29,7 +21,5 @@
 			<artifactId>sqljdbc4</artifactId>
 			<version>4.0.2206.100</version>
 		</dependency>
-
-
 	</dependencies>
 </project>
