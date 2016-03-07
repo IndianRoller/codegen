@@ -11,7 +11,13 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
+import com.ir.cgtool.domain.CgObject;
+import com.ir.cgtool.domain.DBColumn;
+import com.ir.cgtool.domain.Method;
+import com.ir.cgtool.domain.Variable;
+import com.ir.cgtool.util.CodeGenUtil;
 import com.ir.util.ConnectionUtil;
 import com.ir.util.StringUtil;
 
@@ -102,6 +108,8 @@ public class CodeGenerator {
 		CgObject cgObject = new CgObject(tableName,srcFolder,packagePath);	 
 		
 		Map<String,DBColumn> dbColumnMap = loadColumnMap(tableName,connection);
+		if(dbColumnMap==null || dbColumnMap.isEmpty()) return;
+		
 		Iterator<String> itr = dbColumnMap.keySet().iterator();
 		
 		//List<String> importList = new ArrayList<String>();
@@ -251,16 +259,16 @@ public class CodeGenerator {
 		cgObject.getDomainHelperExt().generateCode();
 		
 		
-		cgObject.getDao().generateCode();
+		cgObject.getDaoBase().generateCode();
 		cgObject.getDaoExt().generateCode();
 		
 		cgObject.getDaoImpl().generateCode();
 		cgObject.getDaoImplExt().generateCode();
 
-		cgObject.getService().generateCode();
+		cgObject.getServiceBase().generateCode();
 		cgObject.getServiceExt().generateCode();
 		
-		cgObject.getServiceImpl().generateCode();
+		cgObject.getServiceBaseImpl().generateCode();
 		cgObject.getServiceImplExt().generateCode();
 		
 		
@@ -341,7 +349,7 @@ public class CodeGenerator {
 		 StringBuffer methodBodyServiceImpl  = new StringBuffer();
 		 methodBodyServiceImpl.append("\t").append("\t");
 		 if(!"update".equalsIgnoreCase(type))    methodBodyServiceImpl.append("return ");
-		 methodBodyServiceImpl.append(cgObject.getDao().getNameForVariable()).append(".").append(methodName).append("(")
+		 methodBodyServiceImpl.append(cgObject.getDaoBase().getNameForVariable()).append(".").append(methodName).append("(")
 		 					  .append(Method.getParamCode(params,Variable.PARAM_MODE_EXE)).append(")").append(";");
 		 
 		 
@@ -350,8 +358,8 @@ public class CodeGenerator {
 		 
 		 Method method = new Method("public",returnType, methodName, params  , null,true);
 		 method.getThrownExceptions().add("Exception");
-		 cgObject.getDao().getMethodList().add(method);
- 		 cgObject.getService().getMethodList().add(method);
+		 cgObject.getDaoBase().getMethodList().add(method);
+ 		 cgObject.getServiceBase().getMethodList().add(method);
 		
  		 
  		 method = new Method("public",returnType, methodName, params  , methodBodyDaoImpl.toString(),false);
@@ -360,7 +368,7 @@ public class CodeGenerator {
  
 		 method = new Method("public",returnType, methodName, params  , methodBodyServiceImpl.toString(),false);
 		 method.getThrownExceptions().add("Exception");
-		 cgObject.getServiceImpl().getMethodList().add(method);
+		 cgObject.getServiceBaseImpl().getMethodList().add(method);
 	}
 
 
@@ -432,8 +440,8 @@ public class CodeGenerator {
 		 String methodName = "delete"+cgObject.getDomainExt().getName()+"By"+colName ;
 		 Method method = new Method("public","void", methodName, params  , null,true);
 		 method.getThrownExceptions().add("Exception");
-		 cgObject.getDao().getMethodList().add(method);
-		 cgObject.getService().getMethodList().add(method);
+		 cgObject.getDaoBase().getMethodList().add(method);
+		 cgObject.getServiceBase().getMethodList().add(method);
 		 
 		 StringBuffer methodBodyDaoImpl =   getDaoImplMethodBody(cgObject, "true;" , "delete",dbColumn);
 		 Method daoImplMethod = new Method("public","void", methodName, params  , methodBodyDaoImpl.toString());
@@ -441,10 +449,10 @@ public class CodeGenerator {
 		 daoImplMethod.getThrownExceptions().add("Exception");
 		 
 		 StringBuffer methodBodyServiceImpl = new StringBuffer();
-		 methodBodyServiceImpl.append("\t").append("\t").append(cgObject.getDao().getNameForVariable()).append(".").append(methodName).append("(").append(dbColumn.getColumnName()).append(")").append(";");
+		 methodBodyServiceImpl.append("\t").append("\t").append(cgObject.getDaoBase().getNameForVariable()).append(".").append(methodName).append("(").append(dbColumn.getColumnName()).append(")").append(";");
 		 Method serviceMethod = new Method("public","void", "delete"+cgObject.getDomainExt().getName()+"By"+colName, params  , methodBodyServiceImpl.toString());
 		 serviceMethod.getThrownExceptions().add("Exception");
-		 cgObject.getServiceImpl().getMethodList().add(serviceMethod);
+		 cgObject.getServiceBaseImpl().getMethodList().add(serviceMethod);
 	}
 
 
@@ -479,11 +487,11 @@ public class CodeGenerator {
 		 Method method = new Method("public",returnType, methodName, params  , null,true);
 		 method.getThrownExceptions().add("Exception");
 		  
-		 cgObject.getDao().getMethodList().add(method);
+		 cgObject.getDaoBase().getMethodList().add(method);
 		 
 		 Method methodService = new Method("public",returnType, methodName, params  , null,true);
 		 methodService.getThrownExceptions().add("Exception");
-		 cgObject.getService().getMethodList().add(methodService);
+		 cgObject.getServiceBase().getMethodList().add(methodService);
 		 
 		 StringBuffer methodBodyDaoImpl = new StringBuffer();
 		 methodBodyDaoImpl.append("\t\t").append("String sql = ").append(sql).append(";\n")
@@ -527,12 +535,12 @@ public class CodeGenerator {
 		 cgObject.getDaoImpl().getMethodList().add(m);
 		 
 		 StringBuffer methodBodyServiceImpl = new StringBuffer();
-		 methodBodyServiceImpl.append("\t").append("\t").append("return ").append(cgObject.getDao().getNameForVariable()).append(".").append(methodName).append("(")
+		 methodBodyServiceImpl.append("\t").append("\t").append("return ").append(cgObject.getDaoBase().getNameForVariable()).append(".").append(methodName).append("(")
 		 .append(dbColumn!=null ? dbColumn.getColumnName():"")
 		 .append(")").append(";");
 		 Method serviceMethod =  new Method("public",returnType, methodName , params  , methodBodyServiceImpl.toString());
 		 serviceMethod.getThrownExceptions().add("Exception");
-		 cgObject.getServiceImpl().getMethodList().add(serviceMethod);
+		 cgObject.getServiceBaseImpl().getMethodList().add(serviceMethod);
 	}
 
  
@@ -581,14 +589,21 @@ public class CodeGenerator {
 			psmt1 = connection.prepareStatement(keysSql);
 			psmt1.setString(1, tableName);
 			rs1 = psmt1.executeQuery();
+			DBColumn pkColumn = null; 
 			while (rs1.next()) {
 				String keyType = rs1.getString("CONSTRAINT_TYPE");
 				DBColumn dbColumn = dbColumnMap.get(rs1.getString("COLUMN_NAME"));
-				if("PRIMARY KEY".equalsIgnoreCase(keyType) || "P".equalsIgnoreCase(keyType) ) dbColumn.setPrimaryKeyColumn(true);
+				if("PRIMARY KEY".equalsIgnoreCase(keyType) || "P".equalsIgnoreCase(keyType) ) {
+					dbColumn.setPrimaryKeyColumn(true);
+					pkColumn = dbColumn;
+				}
 				if("UNIQUE".equalsIgnoreCase(keyType) || "U".equalsIgnoreCase(keyType)) dbColumn.setUniqueKeyColumn(true);
 				if("FOREIGN KEY".equalsIgnoreCase(keyType) || "R".equalsIgnoreCase(keyType)) dbColumn.setRefKeyColumn(true);
 			}
 			
+			if(pkColumn==null ||  !"Long".equalsIgnoreCase(pkColumn.getJavaColType(dbProductName))){
+				dbColumnMap.clear();
+			}
 		} catch(Exception ex){
 			throw ex;
 		} finally {
@@ -600,8 +615,12 @@ public class CodeGenerator {
 
 	public static void main(String[] args) throws Exception {
 		CodeGenerator cg = new CodeGenerator();
-		cg.execute("",System.getProperty("user.dir")+"\\cgsrc" , "com\\ir");
-		System.out.println("Success");
+		Properties cgToolProperties = CGToolInfo.getInstance().getCgToolProperties();
+		String tableNames = cgToolProperties.getProperty("tableNames");
+		String srcFolder = StringUtil.isEmpty(cgToolProperties.getProperty("srcFolder")) ? System.getProperty("user.dir") + "\\cgsrc" : cgToolProperties.getProperty("srcFolder");
+		String packagePath =  StringUtil.isEmpty(cgToolProperties.getProperty("packagePath")) ? "com\\ir"   : cgToolProperties.getProperty("packagePath");
+		cg.execute(tableNames, srcFolder, packagePath);
+		System.out.println("Successfully generated the source");
 	}
 
 }

@@ -1,4 +1,4 @@
-package com.ir.cgtool;
+package com.ir.cgtool.domain;
 
 import java.util.ArrayList;
 import java.util.List;

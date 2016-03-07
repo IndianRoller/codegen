@@ -1,4 +1,4 @@
-package com.ir.cgtool;
+package com.ir.cgtool.util;
 
 import java.util.StringTokenizer;
 

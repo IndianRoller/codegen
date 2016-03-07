@@ -1,4 +1,4 @@
-package com.ir.cgtool;
+package com.ir.cgtool.domain;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.ir.cgtool.util.CodeGenUtil;
 import com.ir.util.StringUtil;
 
 public class JavaSource {

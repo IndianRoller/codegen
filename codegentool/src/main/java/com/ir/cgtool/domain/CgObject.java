@@ -1,7 +1,9 @@
-package com.ir.cgtool;
+package com.ir.cgtool.domain;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import com.ir.cgtool.util.CodeGenUtil;
 
 public class CgObject {
 
@@ -15,13 +17,13 @@ public class CgObject {
 
 	private JavaSource domainHelper = null;
 
-	private JavaSource service = null;
+	private JavaSource serviceBase = null;
 
-	private JavaSource serviceImpl = null;
+	private JavaSource serviceBaseImpl = null;
 
-	private JavaSource dao = null;
+	private JavaSource daoBase = null;
 
-	private JavaSource daoImpl = null;
+	private JavaSource daoBaseImpl = null;
 	
 	private JavaSource domainExt = null;
 
@@ -75,8 +77,8 @@ public class CgObject {
 	    
 	    
 	    JavaSource dao = new JavaSource("interface", javaClassName+"DaoBase" , packagePath.concat(".dao.cg"), srcFolder+"\\"+srcPackage+"\\dao\\cg");
-	    setDao(dao);
-	    getDao().getImportList().add(domainExt.getFullName()); 
+	    setDaoBase(dao);
+	    getDaoBase().getImportList().add(domainExt.getFullName()); 
 	    
 	    
 	    JavaSource daoExt = new JavaSource("interface", javaClassName+"Dao" , packagePath.concat(".dao"), srcFolder+"\\"+srcPackage+"\\dao");
@@ -92,7 +94,7 @@ public class CgObject {
 	    daoImpl.setSuperClassName(dao.getName());
 	    setDaoImpl(daoImpl);
 	    getDaoImpl().getImportList().add(domainExt.getFullName());
-	    getDaoImpl().getImportList().add(domainHelper.getFullName());
+	    //getDaoImpl().getImportList().add(domainHelper.getFullName());
 	    getDaoImpl().getImportList().add(dao.getFullName());
 	    getDaoImpl().getImportList().add(getDomainHelperExt().getFullName());
 		
@@ -136,31 +138,31 @@ public class CgObject {
 	    daoImplExt.setOverwrite(false);
 	    setDaoImplExt(daoImplExt);	    
 	    
-	    JavaSource service = new JavaSource("interface", javaClassName+"ServiceBase" , packagePath.concat(".service.cg"), srcFolder+"\\"+srcPackage+"\\service\\cg");
+	    JavaSource serviceBase = new JavaSource("interface", javaClassName+"ServiceBase" , packagePath.concat(".service.cg"), srcFolder+"\\"+srcPackage+"\\service\\cg");
 	    List<String> importList = new ArrayList<String>();
 	    importList.add(getDomainExt().getFullName());
-		service.setImportList(importList);
-	    setService(service);
+	    serviceBase.setImportList(importList);
+	    setServiceBase(serviceBase);
 	    
 	    JavaSource serviceExt = new JavaSource("interface", javaClassName+"Service" , packagePath.concat(".service"), srcFolder+"\\"+srcPackage+"\\service");
 	    serviceExt.setSuperClassAssociationType("extends");
-	    serviceExt.setSuperClassName(service.getName());
-	    serviceExt.getImportList().add(service.getFullName());
+	    serviceExt.setSuperClassName(serviceBase.getName());
+	    serviceExt.getImportList().add(serviceBase.getFullName());
 	    serviceExt.setOverwrite(false);
 	    setServiceExt(serviceExt);
 	    
 	    
-	    JavaSource serviceImpl = new JavaSource("class", javaClassName+"ServiceBaseImpl", packagePath.concat(".service.cg.impl"), srcFolder+"\\"+srcPackage+"\\service\\cg\\impl");
+	    JavaSource serviceBaseImpl = new JavaSource("class", javaClassName+"ServiceBaseImpl", packagePath.concat(".service.cg.impl"), srcFolder+"\\"+srcPackage+"\\service\\cg\\impl");
 	    importList = new ArrayList<String>();
-	    importList.add(getDomainExt().getFullName());
-	    importList.add(getDao().getFullName());	    
+	    //importList.add(getDomainExt().getFullName());
+	    importList.add(getDaoBase().getFullName());	    
 	    importList.add(getDaoImpl().getFullName());	    
-	    importList.add(getService().getFullName());	
+	    importList.add(getServiceBase().getFullName());	
 	    
 		
-	    serviceImpl.setImportList(importList);
-	    serviceImpl.setSuperClassAssociationType("implements");
-	    serviceImpl.setSuperClassName(service.getName());
+	    serviceBaseImpl.setImportList(importList);
+	    serviceBaseImpl.setSuperClassAssociationType("implements");
+	    serviceBaseImpl.setSuperClassName(serviceBase.getName());
  	    
 	    Variable daoVar = new Variable(dao.getName(), dao.getName(), "private"); 
 	    params = new ArrayList<Variable>();
@@ -171,36 +173,36 @@ public class CgObject {
 		getMethodBody = new StringBuffer();
 		getMethodBody.append("\t").append("\t").append("return ").append(daoVar.getName()).append(";");
 		
-		serviceImpl.getVariableList().add(daoVar);
-		serviceImpl.getMethodList().add(new Method("public", dao.getName(), "get"+CodeGenUtil.toUpperCase(dao.getName(), 0), new ArrayList<Variable>(),getMethodBody.toString()));
-		serviceImpl.getMethodList().add(new Method("public", "void", "set"+CodeGenUtil.toUpperCase(dao.getName(), 0), params,setMethodBody.toString()));
+		serviceBaseImpl.getVariableList().add(daoVar);
+		serviceBaseImpl.getMethodList().add(new Method("public", dao.getName(), "get"+CodeGenUtil.toUpperCase(dao.getName(), 0), new ArrayList<Variable>(),getMethodBody.toString()));
+		serviceBaseImpl.getMethodList().add(new Method("public", "void", "set"+CodeGenUtil.toUpperCase(dao.getName(), 0), params,setMethodBody.toString()));
 		
 		Method serviceConstructor = new Method();
 	    serviceConstructor.setConstructor(true);
-	    serviceConstructor.setName(serviceImpl.getName());
+	    serviceConstructor.setName(serviceBaseImpl.getName());
 	    serviceConstructor.setAccess("public");
 	 
 	    StringBuffer constBodyServiceImpl = new StringBuffer();
-	    constBodyServiceImpl.append("\t").append("\t").append("this.").append(getDao().getNameForVariable()).append("=").append("new ").append(getDaoImpl().getName()).append("();");
+	    constBodyServiceImpl.append("\t").append("\t").append("this.").append(getDaoBase().getNameForVariable()).append("=").append("new ").append(getDaoImpl().getName()).append("();");
 	    serviceConstructor.setBody(constBodyServiceImpl.toString());
  	    
-	    serviceImpl.getMethodList().add(serviceConstructor);
-	    serviceImpl.getImportList().add(domainExt.getFullName());
-	    service.getImportList().add(domain.getFullName());
-		setServiceImpl(serviceImpl);
+	    serviceBaseImpl.getMethodList().add(serviceConstructor);
+	    serviceBaseImpl.getImportList().add(domainExt.getFullName());
+	    //serviceBase.getImportList().add(domain.getFullName());
+		setServiceBaseImpl(serviceBaseImpl);
 		
 		
 		JavaSource serviceImplExt = new JavaSource("class", javaClassName+"ServiceImpl", packagePath.concat(".service.impl"), srcFolder+"\\"+srcPackage+"\\service\\impl");
 		serviceImplExt.setSuperClassAssociationType("extends");
-		serviceImplExt.setSuperClassName(serviceImpl.getName());
+		serviceImplExt.setSuperClassName(serviceBaseImpl.getName());
 		serviceImplExt.getImplmentionList().add(serviceExt.getName());
-		serviceImplExt.getImportList().add(serviceImpl.getFullName());
+		serviceImplExt.getImportList().add(serviceBaseImpl.getFullName());
 		serviceImplExt.getImportList().add(serviceExt.getFullName());
 		serviceImplExt.setOverwrite(false);
 	    setServiceImplExt(serviceImplExt);
 	 		
  		
-		getDao().getImportList().add("java.util.List");
+		getDaoBase().getImportList().add("java.util.List");
 		getDaoImpl().getImportList().add("java.sql.Connection");
   		getDaoImpl().getImportList().add("java.sql.ResultSet");
   		
@@ -217,8 +219,8 @@ public class CgObject {
 		getDaoImpl().getImportList().add("com.ir.util.DBUtil");
 		
 	
-		getService().getImportList().add("java.util.List");
-		getServiceImpl().getImportList().add("java.util.List");
+		getServiceBase().getImportList().add("java.util.List");
+		getServiceBaseImpl().getImportList().add("java.util.List");
 	    
 	}
 
@@ -262,36 +264,36 @@ public class CgObject {
 		this.domainHelper = domainHelper;
 	}
 
-	public JavaSource getService() {
-		return service;
+	public JavaSource getServiceBase() {
+		return serviceBase;
 	}
 
-	public void setService(JavaSource service) {
-		this.service = service;
+	public void setServiceBase(JavaSource serviceBase) {
+		this.serviceBase = serviceBase;
 	}
 
-	public JavaSource getServiceImpl() {
-		return serviceImpl;
+	public JavaSource getServiceBaseImpl() {
+		return serviceBaseImpl;
 	}
 
-	public void setServiceImpl(JavaSource serviceImpl) {
-		this.serviceImpl = serviceImpl;
+	public void setServiceBaseImpl(JavaSource serviceBaseImpl) {
+		this.serviceBaseImpl = serviceBaseImpl;
 	}
 
-	public JavaSource getDao() {
-		return dao;
+	public JavaSource getDaoBase() {
+		return daoBase;
 	}
 
-	public void setDao(JavaSource dao) {
-		this.dao = dao;
+	public void setDaoBase(JavaSource daoBase) {
+		this.daoBase = daoBase;
 	}
 
 	public JavaSource getDaoImpl() {
-		return daoImpl;
+		return daoBaseImpl;
 	}
 
 	public void setDaoImpl(JavaSource daoImpl) {
-		this.daoImpl = daoImpl;
+		this.daoBaseImpl = daoImpl;
 	}
 	
 	public JavaSource getDomainExt() {
@@ -363,9 +365,9 @@ public class CgObject {
 	public String toString() {
 		return "CgObject [tableName=" + tableName + ", srcFolder=" + srcFolder
 				+ ", srcPackage=" + srcPackage + ", domain=" + domain
-				+ ", domainBase=" +  ", service=" + service
-				+ ", serviceImpl=" + serviceImpl + ", dao=" + dao
-				+ ", daoImpl=" + daoImpl + "]";
+				+ ", domainBase=" +  ", service=" + serviceBase
+				+ ", serviceImpl=" + serviceBaseImpl + ", dao=" + daoBase
+				+ ", daoImpl=" + daoBaseImpl + "]";
 	}
   
 }

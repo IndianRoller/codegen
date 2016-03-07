@@ -8,12 +8,10 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
 
-import com.ir.cgtool.CGToolInfo;
-
 public class ConnectionUtil {
     
 	public static Connection getConnection() throws Exception {
-		Properties cgToolProperties = CGToolInfo.getInstance().getCgToolProperties();
+		Properties cgToolProperties = DBInfo.getInstance().getDBProperties();
 		
 		Class.forName(cgToolProperties.getProperty("jdbc.driver"));
 		

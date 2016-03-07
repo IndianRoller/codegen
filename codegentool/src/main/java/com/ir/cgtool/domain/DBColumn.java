@@ -1,6 +1,7 @@
-package com.ir.cgtool;
+package com.ir.cgtool.domain;
 
 
+import com.ir.cgtool.util.CodeGenUtil;
 
 public class DBColumn {
 	
