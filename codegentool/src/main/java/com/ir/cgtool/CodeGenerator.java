@@ -19,6 +19,7 @@ import com.ir.cgtool.domain.Method;
 import com.ir.cgtool.domain.Variable;
 import com.ir.cgtool.util.CodeGenUtil;
 import com.ir.util.ConnectionUtil;
+import com.ir.util.DBInfo;
 import com.ir.util.StringUtil;
 
 public class CodeGenerator {
@@ -44,6 +45,9 @@ public class CodeGenerator {
 	public void execute(String tableName,String srcFolder,String packagePath) throws Exception {
 		Connection connection = null ;
 		try {
+			
+			System.setProperty(DBInfo.USE_DATASOURCE, DBInfo.USE_DATASOURCE_FALSE);
+			
 			connection = ConnectionUtil.getConnection();
 			 
 			File srcDir = new File(srcFolder+"//"+packagePath.replace(".", "//"));
