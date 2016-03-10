@@ -34,13 +34,16 @@ public class JavaSource {
 
 	private boolean overwrite = true;
 
+	private boolean testClassRequired = false;
+
 	public JavaSource(String type, String name, String sourcePackage,
-			String sourceFolder) {
+			String sourceFolder, boolean testClassRequired) {
 		super();
-		this.type = type;
-		this.name = name;
-		this.sourcePackage = sourcePackage;
-		this.sourceFolder = sourceFolder;
+		setType(type);
+		setName(name);
+		setSourcePackage(sourcePackage);
+		setSourceFolder(sourceFolder);
+		setTestClassRequired(testClassRequired);
 	}
 
 	public String getType() {
@@ -131,6 +134,14 @@ public class JavaSource {
 		this.overwrite = overwrite;
 	}
 
+	public boolean isTestClassRequired() {
+		return testClassRequired;
+	}
+
+	public void setTestClassRequired(boolean testClassRequired) {
+		this.testClassRequired = testClassRequired;
+	}
+
 	public String getFullName() {
 		return getSourcePackage().concat(".").concat(getName());
 	}
@@ -147,12 +158,12 @@ public class JavaSource {
 		return content.toString();
 	}
 
-	public String getImportStatementCode() {
-		if (getImportList().isEmpty())
+	public String getImportStatementCode(List<String> importList) {
+		if (importList.isEmpty())
 			return "";
 
 		StringBuffer content = new StringBuffer();
-		for (String s : getImportList())
+		for (String s : importList)
 			content.append("import ").append(s).append(";")
 					.append(StringUtil.LINE_SEPARTOR);
 
@@ -160,6 +171,8 @@ public class JavaSource {
 		return content.toString();
 	}
 
+	
+	
 	public String getSourceNameCode() {
 		StringBuffer content = new StringBuffer();
 		content.append("public ").append(getType()).append(" ")
@@ -184,27 +197,40 @@ public class JavaSource {
 		return content.toString();
 	}
 
+	public String getTestNameCode() {
+		StringBuffer content = new StringBuffer();
+		content.append("public ").append(getType()).append(" ").append(getTestName()).append(" ");
+		content.append("extends" + " " + "TestCase").append(" ");
+ 		content.append("{").append(StringUtil.LINE_SEPARTOR).append(StringUtil.LINE_SEPARTOR);
+		return content.toString();
+	}
+	
 	public String getEndOfSource() {
 		return "}";
 	}
 
 	public void generateCode() throws IOException {
-		if (getName() == null)
-			return;
+		generateSrcCode();
+
+		generateTestCode();
+		
+	}
+
+	private void generateSrcCode() throws IOException {
+		if (getName() == null) return;
+
 		File serviceDirectory = new File(getSourceFolder());
 		if (!serviceDirectory.exists())
 			serviceDirectory.mkdirs();
 		File srcFile = new File(getSourceFolder() + "\\" + getName() + ".java");
 
-		if (!isOverwrite() && srcFile.exists())
-			return;
+		if (!isOverwrite() && srcFile.exists()) return;
 
 		BufferedWriter output = new BufferedWriter(new FileWriter(srcFile));
 
-		// BufferedWriter output = getBufferdWriter();
-		StringBuffer content = new StringBuffer();
+ 		StringBuffer content = new StringBuffer();
 		content.append(getPackageStatementCode());
-		content.append(getImportStatementCode());
+		content.append(getImportStatementCode(getImportList()));
 		content.append(getSourceNameCode());
 
 		content.append(getInstanceVariablesCode());
@@ -213,7 +239,37 @@ public class JavaSource {
 		content.append(getEndOfSource());
 		output.write(content.toString());
 		output.close();
+	}
 
+	private void generateTestCode() throws IOException {
+		if (getName() == null || !isTestClassRequired()) return;
+
+		File dir = new File(getTestFolder());
+
+		if (!dir.exists()) dir.mkdirs();
+		
+		File testFile = new File(getTestFolder() + "\\" + getTestName() + ".java");
+
+		if (!isOverwrite() && testFile.exists()) return;
+
+		
+		StringBuffer content = new StringBuffer();
+		content.append(getPackageStatementCode());
+		
+		List<String> testImport = new ArrayList<String>(1);
+		testImport.add("junit.framework.TestCase");
+		
+		content.append(getImportStatementCode(testImport));
+		content.append(getTestNameCode());
+
+		//content.append(getInstanceVariablesTestCode());
+        //content.append(getMethodsCode());
+
+		content.append(getEndOfSource());
+
+		BufferedWriter output = new BufferedWriter(new FileWriter(testFile));
+		output.write(content.toString());
+		output.close();
 	}
 
 	private String getMethodsCode() {
@@ -231,8 +287,7 @@ public class JavaSource {
 	}
 
 	private Object getInstanceVariablesCode() {
-		if (getVariableList().isEmpty())
-			return "";
+		if (getVariableList().isEmpty()) return "";
 
 		StringBuffer content = new StringBuffer();
 
@@ -242,6 +297,19 @@ public class JavaSource {
 		return content.toString();
 	}
 
+	private Object getInstanceVariablesTestCode() {
+		if (getVariableList().isEmpty()) return "";
+
+		StringBuffer content = new StringBuffer("public void testGetterSetters() {").append(StringUtil.LINE_SEPARTOR);
+
+		for (Variable variable : getVariableList()) {
+			content.append(variable.getInstanceVariableTestCode(getName()));
+		}
+		
+		content.append(" } ").append(StringUtil.LINE_SEPARTOR);
+		return content.toString();
+	}
+	
 	public BufferedWriter getBufferdWriter() throws IOException {
 		File serviceDirectory = new File(getSourceFolder());
 		if (!serviceDirectory.exists())
@@ -258,5 +326,16 @@ public class JavaSource {
 				+ ", sourcePackage=" + sourcePackage + ", sourceFolder="
 				+ sourceFolder + "]";
 	}
+	
+	public String getTestFolder() {
+		String testFolder = sourceFolder;
+		return testFolder.replace("main", "test");
+	}
+	
+	public String getTestName() {
+		String testName = getName();
+		return testName + "Test" ;  	
+  }
+
 
 }

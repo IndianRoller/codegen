@@ -245,38 +245,17 @@ public class CodeGenerator {
 		domainHelperMaptoDomain(cgObject, dhMapFromDB);
 		
 		domainHelperMapToDB(cgObject, dhMapToDB);
-		
 
 		saveMethod(cgObject,false, "add");
 
 		//saveMethod(cgObject,true , "add");
 
 		saveMethod(cgObject,false , "update");
-
- 
-		 
-		cgObject.getDomain().generateCode();
-		cgObject.getDomainExt().generateCode();
-		
-		cgObject.getDomainHelper().generateCode();
-		
-		cgObject.getDomainHelperExt().generateCode();
-		
-		
-		cgObject.getDaoBase().generateCode();
-		cgObject.getDaoExt().generateCode();
-		
-		cgObject.getDaoImpl().generateCode();
-		cgObject.getDaoImplExt().generateCode();
-
-		cgObject.getServiceBase().generateCode();
-		cgObject.getServiceExt().generateCode();
-		
-		cgObject.getServiceBaseImpl().generateCode();
-		cgObject.getServiceImplExt().generateCode();
-		
-		
+		cgObject.generateCode();
 	}
+
+
+	
 
 
 	private void domainHelperMapToDB(CgObject cgObject, StringBuffer dhMapToDB) {

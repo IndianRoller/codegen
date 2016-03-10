@@ -1,5 +1,6 @@
 package com.ir.cgtool.domain;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -54,10 +55,10 @@ public class CgObject {
 		
 		String packagePath  = srcPackage.replace("\\", ".");
 		 
-	    JavaSource domain = new JavaSource("class", javaClassName+"Base", packagePath.concat(".domain.cg"), srcFolder+"\\"+srcPackage+"\\domain\\cg");
+	    JavaSource domain = new JavaSource("class", javaClassName+"Base", packagePath.concat(".domain.cg"), srcFolder+"\\"+srcPackage+"\\domain\\cg", false);
 	    setDomain(domain);
 
-	    JavaSource domainExt = new JavaSource("class", javaClassName, packagePath.concat(".domain"), srcFolder+"\\"+srcPackage+"\\domain");
+	    JavaSource domainExt = new JavaSource("class", javaClassName, packagePath.concat(".domain"), srcFolder+"\\"+srcPackage+"\\domain", false);
 	    domainExt.setSuperClassAssociationType("extends");
 	    domainExt.setSuperClassName(domain.getName());
 	    domainExt.getImportList().add(domain.getFullName());
@@ -65,10 +66,10 @@ public class CgObject {
 	    setDomainExt(domainExt);
 	    
 	    
-	    JavaSource domainHelper = new JavaSource("class", javaClassName+"HelperBase", packagePath.concat(".domain.cg"), srcFolder+"\\"+srcPackage+"\\domain\\cg");
+	    JavaSource domainHelper = new JavaSource("class", javaClassName+"HelperBase", packagePath.concat(".domain.cg"), srcFolder+"\\"+srcPackage+"\\domain\\cg", false);
 	    setDomainHelper(domainHelper);
 	    
-	    JavaSource domainHelperExt = new JavaSource("class", javaClassName+"Helper", packagePath.concat(".domain"), srcFolder+"\\"+srcPackage+"\\domain");
+	    JavaSource domainHelperExt = new JavaSource("class", javaClassName+"Helper", packagePath.concat(".domain"), srcFolder+"\\"+srcPackage+"\\domain", false);
 	    domainHelperExt.setSuperClassAssociationType("extends");
 	    domainHelperExt.setSuperClassName(domainHelper.getName());
 	    domainHelperExt.getImportList().add(domainHelper.getFullName());
@@ -76,12 +77,12 @@ public class CgObject {
 	    setDomainHelperExt(domainHelperExt);
 	    
 	    
-	    JavaSource dao = new JavaSource("interface", javaClassName+"DaoBase" , packagePath.concat(".dao.cg"), srcFolder+"\\"+srcPackage+"\\dao\\cg");
+	    JavaSource dao = new JavaSource("interface", javaClassName+"DaoBase" , packagePath.concat(".dao.cg"), srcFolder+"\\"+srcPackage+"\\dao\\cg", false);
 	    setDaoBase(dao);
 	    getDaoBase().getImportList().add(domainExt.getFullName()); 
 	    
 	    
-	    JavaSource daoExt = new JavaSource("interface", javaClassName+"Dao" , packagePath.concat(".dao"), srcFolder+"\\"+srcPackage+"\\dao");
+	    JavaSource daoExt = new JavaSource("interface", javaClassName+"Dao" , packagePath.concat(".dao"), srcFolder+"\\"+srcPackage+"\\dao", false);
 	    daoExt.setSuperClassAssociationType("extends");
 	    daoExt.setSuperClassName(dao.getName());
 	    daoExt.getImportList().add(dao.getFullName());
@@ -89,7 +90,7 @@ public class CgObject {
 	    setDaoExt(daoExt);	    
 	    
 		
-	    JavaSource daoImpl = new JavaSource("class", javaClassName+"DaoBaseImpl", packagePath.concat(".dao.cg.impl"), srcFolder+"\\"+srcPackage+"\\dao\\cg\\impl");
+	    JavaSource daoImpl = new JavaSource("class", javaClassName+"DaoBaseImpl", packagePath.concat(".dao.cg.impl"), srcFolder+"\\"+srcPackage+"\\dao\\cg\\impl", true);
 	    daoImpl.setSuperClassAssociationType("implements");
 	    daoImpl.setSuperClassName(dao.getName());
 	    setDaoImpl(daoImpl);
@@ -126,7 +127,7 @@ public class CgObject {
 	    getDaoImpl().getMethodList().add(new Method("public", "void", "set"+domainHelperExt.getName(), params,setMethodBody.toString()));
 		
 	    
-	    JavaSource daoImplExt = new JavaSource("class", javaClassName+"DaoImpl", packagePath.concat(".dao.impl"), srcFolder+"\\"+srcPackage+"\\dao\\impl");
+	    JavaSource daoImplExt = new JavaSource("class", javaClassName+"DaoImpl", packagePath.concat(".dao.impl"), srcFolder+"\\"+srcPackage+"\\dao\\impl", true);
 	    
 	    daoImplExt.getImplmentionList().add(daoExt.getName());
 	    
@@ -138,13 +139,13 @@ public class CgObject {
 	    daoImplExt.setOverwrite(false);
 	    setDaoImplExt(daoImplExt);	    
 	    
-	    JavaSource serviceBase = new JavaSource("interface", javaClassName+"ServiceBase" , packagePath.concat(".service.cg"), srcFolder+"\\"+srcPackage+"\\service\\cg");
+	    JavaSource serviceBase = new JavaSource("interface", javaClassName+"ServiceBase" , packagePath.concat(".service.cg"), srcFolder+"\\"+srcPackage+"\\service\\cg", false);
 	    List<String> importList = new ArrayList<String>();
 	    importList.add(getDomainExt().getFullName());
 	    serviceBase.setImportList(importList);
 	    setServiceBase(serviceBase);
 	    
-	    JavaSource serviceExt = new JavaSource("interface", javaClassName+"Service" , packagePath.concat(".service"), srcFolder+"\\"+srcPackage+"\\service");
+	    JavaSource serviceExt = new JavaSource("interface", javaClassName+"Service" , packagePath.concat(".service"), srcFolder+"\\"+srcPackage+"\\service", false);
 	    serviceExt.setSuperClassAssociationType("extends");
 	    serviceExt.setSuperClassName(serviceBase.getName());
 	    serviceExt.getImportList().add(serviceBase.getFullName());
@@ -152,7 +153,7 @@ public class CgObject {
 	    setServiceExt(serviceExt);
 	    
 	    
-	    JavaSource serviceBaseImpl = new JavaSource("class", javaClassName+"ServiceBaseImpl", packagePath.concat(".service.cg.impl"), srcFolder+"\\"+srcPackage+"\\service\\cg\\impl");
+	    JavaSource serviceBaseImpl = new JavaSource("class", javaClassName+"ServiceBaseImpl", packagePath.concat(".service.cg.impl"), srcFolder+"\\"+srcPackage+"\\service\\cg\\impl", true);
 	    importList = new ArrayList<String>();
 	    //importList.add(getDomainExt().getFullName());
 	    importList.add(getDaoBase().getFullName());	    
@@ -192,7 +193,7 @@ public class CgObject {
 		setServiceBaseImpl(serviceBaseImpl);
 		
 		
-		JavaSource serviceImplExt = new JavaSource("class", javaClassName+"ServiceImpl", packagePath.concat(".service.impl"), srcFolder+"\\"+srcPackage+"\\service\\impl");
+		JavaSource serviceImplExt = new JavaSource("class", javaClassName+"ServiceImpl", packagePath.concat(".service.impl"), srcFolder+"\\"+srcPackage+"\\service\\impl", true);
 		serviceImplExt.setSuperClassAssociationType("extends");
 		serviceImplExt.setSuperClassName(serviceBaseImpl.getName());
 		serviceImplExt.getImplmentionList().add(serviceExt.getName());
@@ -369,5 +370,26 @@ public class CgObject {
 				+ ", serviceImpl=" + serviceBaseImpl + ", dao=" + daoBase
 				+ ", daoImpl=" + daoBaseImpl + "]";
 	}
-  
+
+	public void generateCode() throws IOException {
+		getDomain().generateCode();
+		getDomainExt().generateCode();
+		
+		getDomainHelper().generateCode();
+		
+		getDomainHelperExt().generateCode();
+		
+		
+		getDaoBase().generateCode();
+		getDaoExt().generateCode();
+		
+		getDaoImpl().generateCode();
+		getDaoImplExt().generateCode();
+
+		getServiceBase().generateCode();
+		getServiceExt().generateCode();
+		
+		getServiceBaseImpl().generateCode();
+		getServiceImplExt().generateCode();
+	}
 }

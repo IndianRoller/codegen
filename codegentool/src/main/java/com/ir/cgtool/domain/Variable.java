@@ -53,8 +53,6 @@ public void setAccess(String access) {
 
 }
 
-
-
 public String getInitVal() {
 	return initVal;
 }
@@ -71,8 +69,17 @@ public String getInstanceVariableCode() {
 			.append(StringUtil.LINE_SEPARTOR)
 			.append(StringUtil.LINE_SEPARTOR);
 	return sb.toString();
+	
 } 
 
+public String getInstanceVariableTestCode(String className) {
+	StringBuffer sb = new StringBuffer();
+	sb.append("\t").append("assertNull(").append(" ").append(className).append(".").append(getName()).append(");")
+			//.append(getColInitialization()).append("; ")
+			.append(StringUtil.LINE_SEPARTOR)
+			.append(StringUtil.LINE_SEPARTOR);
+	return sb.toString();
+} 
 private String getColInitialization() {
 
 	if(!StringUtil.isEmpty(getInitVal())) return getInitVal();
