@@ -219,9 +219,9 @@ public class JavaSource {
 	private void generateSrcCode() throws IOException {
 		if (getName() == null) return;
 
-		File serviceDirectory = new File(getSourceFolder());
-		if (!serviceDirectory.exists())
-			serviceDirectory.mkdirs();
+		File fileDirectory = new File(getSourceFolder());
+		if (!fileDirectory.exists()) fileDirectory.mkdirs();
+		
 		File srcFile = new File(getSourceFolder() + "\\" + getName() + ".java");
 
 		if (!isOverwrite() && srcFile.exists()) return;

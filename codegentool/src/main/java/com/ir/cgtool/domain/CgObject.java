@@ -3,7 +3,13 @@ package com.ir.cgtool.domain;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
+import org.w3c.dom.Attr;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+
+import com.ir.cgtool.CodeGenerator;
 import com.ir.cgtool.util.CodeGenUtil;
 
 public class CgObject {
@@ -38,6 +44,9 @@ public class CgObject {
 
 	private JavaSource daoImplExt = null;
 	
+	private boolean createSpringService = false;
+	
+	private boolean createSpringDao = false;
 
 	private String seqName = null;
 
@@ -93,11 +102,11 @@ public class CgObject {
 	    JavaSource daoImpl = new JavaSource("class", javaClassName+"DaoBaseImpl", packagePath.concat(".dao.cg.impl"), srcFolder+"\\"+srcPackage+"\\dao\\cg\\impl", true);
 	    daoImpl.setSuperClassAssociationType("implements");
 	    daoImpl.setSuperClassName(dao.getName());
-	    setDaoImpl(daoImpl);
-	    getDaoImpl().getImportList().add(domainExt.getFullName());
-	    //getDaoImpl().getImportList().add(domainHelper.getFullName());
-	    getDaoImpl().getImportList().add(dao.getFullName());
-	    getDaoImpl().getImportList().add(getDomainHelperExt().getFullName());
+	    setDaoBaseImpl(daoImpl);
+	    getDaoBaseImpl().getImportList().add(domainExt.getFullName());
+	    //getDaoBaseImpl().getImportList().add(domainHelper.getFullName());
+	    getDaoBaseImpl().getImportList().add(dao.getFullName());
+	    getDaoBaseImpl().getImportList().add(getDomainHelperExt().getFullName());
 		
 	    
 	    Method daoImplConstructor = new Method();
@@ -109,7 +118,7 @@ public class CgObject {
 	    constBodyDaoImpl.append("\t").append("\t").append("this.").append(getDomainHelperExt().getNameForVariable()).append("=").append("new ").append(getDomainHelperExt().getName()).append("();");
 	    daoImplConstructor.setBody(constBodyDaoImpl.toString());
  	    
-	    getDaoImpl().getMethodList().add(daoImplConstructor);
+	    getDaoBaseImpl().getMethodList().add(daoImplConstructor);
 	  	
 	    
 	    
@@ -122,9 +131,9 @@ public class CgObject {
 		List<Variable> params = new ArrayList<Variable>();
 		params.add(new Variable(domainHelperExt.getName(), domainHelperExt.getName(), "private"));
 		
-	    getDaoImpl().getVariableList().add(new Variable(domainHelperExt.getNameForVariable(), domainHelperExt.getName(), "private"));
- 		getDaoImpl().getMethodList().add(new Method("public", domainHelperExt.getName(), "get"+domainHelperExt.getName(), new ArrayList<Variable>(),getMethodBody.toString()));
-	    getDaoImpl().getMethodList().add(new Method("public", "void", "set"+domainHelperExt.getName(), params,setMethodBody.toString()));
+	    getDaoBaseImpl().getVariableList().add(new Variable(domainHelperExt.getNameForVariable(), domainHelperExt.getName(), "private"));
+ 		getDaoBaseImpl().getMethodList().add(new Method("public", domainHelperExt.getName(), "get"+domainHelperExt.getName(), new ArrayList<Variable>(),getMethodBody.toString()));
+	    getDaoBaseImpl().getMethodList().add(new Method("public", "void", "set"+domainHelperExt.getName(), params,setMethodBody.toString()));
 		
 	    
 	    JavaSource daoImplExt = new JavaSource("class", javaClassName+"DaoImpl", packagePath.concat(".dao.impl"), srcFolder+"\\"+srcPackage+"\\dao\\impl", true);
@@ -157,7 +166,7 @@ public class CgObject {
 	    importList = new ArrayList<String>();
 	    //importList.add(getDomainExt().getFullName());
 	    importList.add(getDaoBase().getFullName());	    
-	    importList.add(getDaoImpl().getFullName());	    
+	    importList.add(getDaoBaseImpl().getFullName());	    
 	    importList.add(getServiceBase().getFullName());	
 	    
 		
@@ -184,7 +193,7 @@ public class CgObject {
 	    serviceConstructor.setAccess("public");
 	 
 	    StringBuffer constBodyServiceImpl = new StringBuffer();
-	    constBodyServiceImpl.append("\t").append("\t").append("this.").append(getDaoBase().getNameForVariable()).append("=").append("new ").append(getDaoImpl().getName()).append("();");
+	    constBodyServiceImpl.append("\t").append("\t").append("this.").append(getDaoBase().getNameForVariable()).append("=").append("new ").append(getDaoBaseImpl().getName()).append("();");
 	    serviceConstructor.setBody(constBodyServiceImpl.toString());
  	    
 	    serviceBaseImpl.getMethodList().add(serviceConstructor);
@@ -204,20 +213,20 @@ public class CgObject {
 	 		
  		
 		getDaoBase().getImportList().add("java.util.List");
-		getDaoImpl().getImportList().add("java.sql.Connection");
-  		getDaoImpl().getImportList().add("java.sql.ResultSet");
+		getDaoBaseImpl().getImportList().add("java.sql.Connection");
+  		getDaoBaseImpl().getImportList().add("java.sql.ResultSet");
   		
   		getDomainHelper().getImportList().add("java.sql.ResultSet");
   		getDomainHelper().getImportList().add("java.sql.PreparedStatement");
   		getDomainHelper().getImportList().add("java.sql.Types");
   		
   		
-		getDaoImpl().getImportList().add("java.sql.PreparedStatement");
-		getDaoImpl().getImportList().add("java.util.List");
-		getDaoImpl().getImportList().add("java.util.ArrayList");
+		getDaoBaseImpl().getImportList().add("java.sql.PreparedStatement");
+		getDaoBaseImpl().getImportList().add("java.util.List");
+		getDaoBaseImpl().getImportList().add("java.util.ArrayList");
 		
-		getDaoImpl().getImportList().add("com.ir.util.ConnectionUtil");
-		getDaoImpl().getImportList().add("com.ir.util.DBUtil");
+		getDaoBaseImpl().getImportList().add("com.ir.util.ConnectionUtil");
+		getDaoBaseImpl().getImportList().add("com.ir.util.DBUtil");
 		
 	
 		getServiceBase().getImportList().add("java.util.List");
@@ -289,13 +298,6 @@ public class CgObject {
 		this.daoBase = daoBase;
 	}
 
-	public JavaSource getDaoImpl() {
-		return daoBaseImpl;
-	}
-
-	public void setDaoImpl(JavaSource daoImpl) {
-		this.daoBaseImpl = daoImpl;
-	}
 	
 	public JavaSource getDomainExt() {
 		return domainExt;
@@ -345,6 +347,31 @@ public class CgObject {
 		this.daoImplExt = daoImplExt;
 	}
 
+	
+	public JavaSource getDaoBaseImpl() {
+		return daoBaseImpl;
+	}
+
+	public void setDaoBaseImpl(JavaSource daoBaseImpl) {
+		this.daoBaseImpl = daoBaseImpl;
+	}
+
+	public boolean isCreateSpringService() {
+		return createSpringService;
+	}
+
+	public void setCreateSpringService(boolean createSpringService) {
+		this.createSpringService = createSpringService;
+	}
+
+	public boolean isCreateSpringDao() {
+		return createSpringDao;
+	}
+
+	public void setCreateSpringDao(boolean createSpringDao) {
+		this.createSpringDao = createSpringDao;
+	}
+
 	public String getSeqName() {
 		return seqName;
 	}
@@ -371,7 +398,9 @@ public class CgObject {
 				+ ", daoImpl=" + daoBaseImpl + "]";
 	}
 
-	public void generateCode() throws IOException {
+	public void generateCode(Map<String,Document> configFileMap) throws IOException {
+		
+		
 		getDomain().generateCode();
 		getDomainExt().generateCode();
 		
@@ -383,7 +412,7 @@ public class CgObject {
 		getDaoBase().generateCode();
 		getDaoExt().generateCode();
 		
-		getDaoImpl().generateCode();
+		getDaoBaseImpl().generateCode();
 		getDaoImplExt().generateCode();
 
 		getServiceBase().generateCode();
@@ -391,5 +420,27 @@ public class CgObject {
 		
 		getServiceBaseImpl().generateCode();
 		getServiceImplExt().generateCode();
+		
+		if(createSpringService){
+			addSpringBeans( configFileMap.get(CodeGenerator.SERVICE_CONFIG_XML),getServiceImplExt());
+		}
+		
+		if(createSpringDao){
+			addSpringBeans( configFileMap.get(CodeGenerator.DAO_CONFIG_XML),getDaoImplExt());
+		}
 	}
+
+	private void addSpringBeans( Document document, JavaSource src) {
+		  Attr idAttr =  document.createAttribute("id");
+          idAttr.setValue("ba-"+src.getNameForVariable());
+          
+          Attr classAttr =  document.createAttribute("class");
+          classAttr.setValue(src.getSourcePackage()+"."+src.getName());
+          
+          Element newBean = document.createElement("bean");
+          newBean.setAttributeNode(idAttr);
+          newBean.setAttributeNode(classAttr);
+          
+          document.getDocumentElement().appendChild(newBean);
+ 	}
 }

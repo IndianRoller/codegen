@@ -7,11 +7,23 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 import com.ir.cgtool.domain.CgObject;
 import com.ir.cgtool.domain.DBColumn;
@@ -25,7 +37,11 @@ import com.ir.util.StringUtil;
 public class CodeGenerator {
 	
 
-	public static final String ALL_TABLE_SQLSERVER = " SELECT TABLE_NAME  FROM  INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME NOT IN ( 'AS_SEQUENCES' )  " ;
+	public static final String DAO_CONFIG_XML = "dao-config.xml";
+
+	public static final String SERVICE_CONFIG_XML = "service-config.xml";
+
+	public static final String ALL_TABLE_SQLSERVER = " SELECT TABLE_NAME  FROM  INFORMATION_SCHEMA.TABLES  " ;
 
 	public static final String COLUMN_SQL_SQLSERVER = " SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? ";
  
@@ -59,15 +75,59 @@ public class CodeGenerator {
 			}else{
 				tableList.add(tableName);
 			}
+			 	
+			boolean createSpringService =new Boolean(StringUtil.nullCheck(CGToolInfo.getInstance().getCgToolProperties().getProperty("createSpringService"), "FALSE"));
+			boolean createSpringDao =new Boolean(StringUtil.nullCheck(CGToolInfo.getInstance().getCgToolProperties().getProperty("createSpringDao"), "FALSE"));
+			
+			
+			Map<String,Document> configFileMap = new HashMap<String, Document>();
+			
+			if(createSpringService) configFileMap.put(SERVICE_CONFIG_XML,getNewDocument());
+			if(createSpringDao) configFileMap.put(DAO_CONFIG_XML,getNewDocument());
+		 	
+			
+			
 			for(String table : tableList){
-				generateCode(table, srcFolder, packagePath,connection);
+				generateCode(table, srcFolder, packagePath,connection,configFileMap,createSpringService,createSpringDao);
 			}
+			
+			
+			if(createSpringService) {
+				 TransformerFactory transformerFactory = TransformerFactory.newInstance();
+			     Transformer transformer =  transformerFactory.newTransformer();
+			     DOMSource source = new DOMSource(configFileMap.get(SERVICE_CONFIG_XML));
+			     StreamResult result = new StreamResult(new File(srcFolder+"//"+packagePath+"//service",SERVICE_CONFIG_XML));
+			     System.out.println(result.getSystemId());
+			     transformer.transform(source, result);
+		    }
+			
+			if(createSpringDao) {
+				 TransformerFactory transformerFactory = TransformerFactory.newInstance();
+			     Transformer transformer =  transformerFactory.newTransformer();
+			     DOMSource source = new DOMSource(configFileMap.get(DAO_CONFIG_XML));
+			     StreamResult result = new StreamResult(new File(srcFolder+"//"+packagePath+"//dao" , DAO_CONFIG_XML));
+			     transformer.transform(source, result);
+	 	 	}
+		    
 		} catch (Exception ex) {
 			throw ex;
 		} finally{
 			ConnectionUtil.closeConnection(connection);
 		}
 
+	}
+
+
+	private Document getNewDocument() throws ParserConfigurationException {
+		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+		DocumentBuilder dBuilder = 
+		dbFactory.newDocumentBuilder();
+		Document doc = dBuilder.newDocument();
+		
+		Element rootElement = doc.createElement("beans");
+		doc.appendChild(rootElement);
+		
+		return doc;
 	}
 
 
@@ -106,10 +166,14 @@ public class CodeGenerator {
 	}
 
 
-	protected void generateCode(String tableName, String srcFolder, String packagePath,Connection connection) throws Exception, SQLException, IOException {
+	protected void generateCode(String tableName, String srcFolder, String packagePath,Connection connection,Map<String,Document> configFileMap,boolean createSpringService,boolean createSpringDao) throws Exception, SQLException, IOException {
 		
 		
 		CgObject cgObject = new CgObject(tableName,srcFolder,packagePath);	 
+		
+		cgObject.setCreateSpringService(createSpringService);
+		cgObject.setCreateSpringDao(createSpringDao);
+		
 		
 		Map<String,DBColumn> dbColumnMap = loadColumnMap(tableName,connection);
 		if(dbColumnMap==null || dbColumnMap.isEmpty()) return;
@@ -118,9 +182,7 @@ public class CodeGenerator {
 		
 		//List<String> importList = new ArrayList<String>();
 		boolean dateImportAdded = false;
-		
-		
-		
+	 	
 		StringBuffer dhMapFromDB = new StringBuffer();
 		StringBuffer dhMapToDB = new StringBuffer();
 		
@@ -251,7 +313,7 @@ public class CodeGenerator {
 		//saveMethod(cgObject,true , "add");
 
 		saveMethod(cgObject,false , "update");
-		cgObject.generateCode();
+		cgObject.generateCode(configFileMap);
 	}
 
 
@@ -347,7 +409,7 @@ public class CodeGenerator {
  		 
  		 method = new Method("public",returnType, methodName, params  , methodBodyDaoImpl.toString(),false);
 		 method.getThrownExceptions().add("Exception");
-		 cgObject.getDaoImpl().getMethodList().add(method);
+		 cgObject.getDaoBaseImpl().getMethodList().add(method);
  
 		 method = new Method("public",returnType, methodName, params  , methodBodyServiceImpl.toString(),false);
 		 method.getThrownExceptions().add("Exception");
@@ -428,7 +490,7 @@ public class CodeGenerator {
 		 
 		 StringBuffer methodBodyDaoImpl =   getDaoImplMethodBody(cgObject, "true;" , "delete",dbColumn);
 		 Method daoImplMethod = new Method("public","void", methodName, params  , methodBodyDaoImpl.toString());
-		 cgObject.getDaoImpl().getMethodList().add(daoImplMethod);
+		 cgObject.getDaoBaseImpl().getMethodList().add(daoImplMethod);
 		 daoImplMethod.getThrownExceptions().add("Exception");
 		 
 		 StringBuffer methodBodyServiceImpl = new StringBuffer();
@@ -515,7 +577,7 @@ public class CodeGenerator {
 		 
 		 Method m = new Method("public",returnType, methodName, params  , methodBodyDaoImpl.toString());
 		 m.getThrownExceptions().add("Exception");
-		 cgObject.getDaoImpl().getMethodList().add(m);
+		 cgObject.getDaoBaseImpl().getMethodList().add(m);
 		 
 		 StringBuffer methodBodyServiceImpl = new StringBuffer();
 		 methodBodyServiceImpl.append("\t").append("\t").append("return ").append(cgObject.getDaoBase().getNameForVariable()).append(".").append(methodName).append("(")
