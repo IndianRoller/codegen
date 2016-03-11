@@ -3,6 +3,7 @@ package com.ir.cgtool.domain;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.ir.cgtool.util.CodeGenUtil;
 import com.ir.util.StringUtil;
 
 public class Method {
@@ -145,6 +146,39 @@ public class Method {
  		return sb.toString();
 	}
 
+	public String getMethodTestText() {
+		StringBuffer sb = new StringBuffer();
+		sb.append("\t").append(getAccess()).append(" ");
+		if(!isConstructor()) sb.append("void").append(" ");
+		sb.append(getTestName())
+		  .append("() ");
+		
+		if(!getThrownExceptions().isEmpty()) {
+			sb.append("throws").append(" ");
+			int i=0;
+			for(String excep : getThrownExceptions()) {
+			    if(i>0)sb.append(", ");
+				sb.append(excep);
+			    i++;
+			}
+			sb.append(" ");
+		}
+		
+		 if(isAbStract()){
+			 sb.append(";");
+		 }else{
+			 sb.append("{")
+			  .append(StringUtil.LINE_SEPARTOR)
+			  .append("\t").append("\t").append("assert(true);")
+			  .append(StringUtil.LINE_SEPARTOR)
+			  .append("\t").append("}");
+		 }
+		 
+		    sb.append(StringUtil.LINE_SEPARTOR).append(StringUtil.LINE_SEPARTOR);
+ 		return sb.toString();
+	}
+
+	
 	public String getParamCode(){
 		return getParamCode(getParams(),Variable.PARAM_MODE_DECL);
 	}
@@ -162,6 +196,14 @@ public class Method {
 		return sb.toString();
 	}
 	
+	
+	public String getTestName() {
+		String testName = name; 
+		CodeGenUtil.toUpperCase(testName, 0);
+		testName = "test"+testName;
+		return testName;
+	}
+
 	
 
 }

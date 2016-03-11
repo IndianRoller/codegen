@@ -263,7 +263,7 @@ public class JavaSource {
 		content.append(getTestNameCode());
 
 		//content.append(getInstanceVariablesTestCode());
-        //content.append(getMethodsCode());
+        content.append(getMethodsTestCode());
 
 		content.append(getEndOfSource());
 
@@ -286,6 +286,21 @@ public class JavaSource {
 		return content.toString();
 	}
 
+	private String getMethodsTestCode() {
+
+		if (getMethodList().isEmpty())
+			return "";
+
+		StringBuffer content = new StringBuffer();
+
+		for (Method method : getMethodList()) {
+			if(method.isConstructor() || method.isAbStract()) continue; 
+			content.append(method.getMethodTestText());
+		}
+
+		return content.toString();
+	}
+	
 	private Object getInstanceVariablesCode() {
 		if (getVariableList().isEmpty()) return "";
 
