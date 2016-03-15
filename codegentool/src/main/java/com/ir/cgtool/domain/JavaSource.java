@@ -12,6 +12,8 @@ import com.ir.util.StringUtil;
 
 public class JavaSource {
 
+	public static final String END_OF_SRC = "}";
+
 	private String type = null;
 
 	private String name = null;
@@ -36,8 +38,7 @@ public class JavaSource {
 
 	private boolean testClassRequired = false;
 
-	public JavaSource(String type, String name, String sourcePackage,
-			String sourceFolder, boolean testClassRequired) {
+	public JavaSource(String type, String name, String sourcePackage, String sourceFolder, boolean testClassRequired) {
 		super();
 		setType(type);
 		setName(name);
@@ -205,15 +206,13 @@ public class JavaSource {
 		return content.toString();
 	}
 	
-	public String getEndOfSource() {
-		return "}";
-	}
+	
 
 	public void generateCode() throws IOException {
 		generateSrcCode();
 
 		generateTestCode();
-		
+
 	}
 
 	private void generateSrcCode() throws IOException {
@@ -236,7 +235,7 @@ public class JavaSource {
 		content.append(getInstanceVariablesCode());
 		content.append(getMethodsCode());
 
-		content.append(getEndOfSource());
+		content.append(END_OF_SRC);
 		output.write(content.toString());
 		output.close();
 	}
@@ -265,7 +264,7 @@ public class JavaSource {
 		//content.append(getInstanceVariablesTestCode());
         content.append(getMethodsTestCode());
 
-		content.append(getEndOfSource());
+		content.append(END_OF_SRC);
 
 		BufferedWriter output = new BufferedWriter(new FileWriter(testFile));
 		output.write(content.toString());

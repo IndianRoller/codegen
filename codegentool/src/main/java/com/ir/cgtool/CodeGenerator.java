@@ -12,7 +12,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -27,6 +26,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
 import com.ir.cgtool.domain.CgObject;
+import com.ir.cgtool.domain.CodegenParameters;
 import com.ir.cgtool.domain.DBColumn;
 import com.ir.cgtool.domain.Method;
 import com.ir.cgtool.domain.Variable;
@@ -59,55 +59,51 @@ public class CodeGenerator {
 			" SELECT A.COLUMN_NAME,C.CONSTRAINT_TYPE,C.CONSTRAINT_NAME FROM ALL_CONS_COLUMNS A, ALL_CONSTRAINTS C " +
 			" WHERE A.CONSTRAINT_NAME = C.CONSTRAINT_NAME AND A.TABLE_NAME=? ";
 	
-	public void execute(String tableName,String srcFolder,String packagePath) throws Exception {
+	public void execute() throws Exception {
 		Connection connection = null ;
 		try {
+			CodegenParameters cgparams = new CodegenParameters(CGToolInfo.getInstance().getCgToolProperties());
 			
 			System.setProperty(DBInfo.USE_DATASOURCE, DBInfo.USE_DATASOURCE_FALSE);
 			
 			connection = ConnectionUtil.getConnection();
 			 
-			File srcDir = new File(srcFolder+"//"+packagePath.replace(".", "//"));
+			File srcDir = new File(cgparams.getSrcFolder()+"//"+cgparams.getSrcPackage().replace(".", "//"));
 			if (!srcDir.exists()) srcDir.mkdirs();
 			 
 			 List<String> tableList = new ArrayList<String>();
-			if(StringUtil.isEmpty(tableName)) {
+			if(StringUtil.isEmpty(cgparams.getTableNames())) {
 				  tableList = getTableList(connection);
 			}else{
-				tableList.add(tableName);
+				tableList.add(cgparams.getTableNames());
 			}
 			 	
-			boolean createSpringService =new Boolean(StringUtil.nullCheck(CGToolInfo.getInstance().getCgToolProperties().getProperty("createSpringService"), "FALSE"));
-			boolean createSpringDao =new Boolean(StringUtil.nullCheck(CGToolInfo.getInstance().getCgToolProperties().getProperty("createSpringDao"), "FALSE"));
 			
-			String modulePrefix = CGToolInfo.getInstance().getCgToolProperties().getProperty("modulePrefix");
 			
 			Map<String,Document> configFileMap = new HashMap<String, Document>();
 			
-			if(createSpringService) configFileMap.put(SERVICE_CONFIG_XML,getNewDocument());
-			if(createSpringDao) configFileMap.put(DAO_CONFIG_XML,getNewDocument());
+			if(cgparams.isCreateSpringService()) configFileMap.put(SERVICE_CONFIG_XML,getNewDocument());
+			if(cgparams.isCreateSpringDao()) configFileMap.put(DAO_CONFIG_XML,getNewDocument());
 			
-			String basefolder = CGToolInfo.getInstance().getCgToolProperties().getProperty("basefolder");
-			String configFileDir = CGToolInfo.getInstance().getCgToolProperties().getProperty("configFileDir");
 			
 			for(String table : tableList){
-				generateCode(table, srcFolder, packagePath,connection,configFileMap,createSpringService,createSpringDao,modulePrefix);
+				generateCode(connection, table, configFileMap,cgparams);
 			}
 			
 			
-			if(createSpringService) {
+			if(cgparams.isCreateSpringService()) {
 				 TransformerFactory transformerFactory = TransformerFactory.newInstance();
 			     Transformer transformer =  transformerFactory.newTransformer();
 			     DOMSource source = new DOMSource(configFileMap.get(SERVICE_CONFIG_XML));
-			     StreamResult result = new StreamResult(new File(basefolder+"\\"+configFileDir,SERVICE_CONFIG_XML));
+			     StreamResult result = new StreamResult(new File(cgparams.getConfigFileLocation(),SERVICE_CONFIG_XML));
 			     transformer.transform(source, result);
 		    }
 			
-			if(createSpringDao) {
+			if(cgparams.isCreateSpringDao()) {
 				 TransformerFactory transformerFactory = TransformerFactory.newInstance();
 			     Transformer transformer =  transformerFactory.newTransformer();
 			     DOMSource source = new DOMSource(configFileMap.get(DAO_CONFIG_XML));
-			     StreamResult result = new StreamResult(new File(basefolder+"\\"+configFileDir,DAO_CONFIG_XML));
+			     StreamResult result = new StreamResult(new File(cgparams.getConfigFileLocation(),DAO_CONFIG_XML));
 			     transformer.transform(source, result);
 	 	 	}
 		    
@@ -118,6 +114,8 @@ public class CodeGenerator {
 		}
 
 	}
+
+
 
 
 	private Document getNewDocument() throws ParserConfigurationException {
@@ -184,16 +182,12 @@ public class CodeGenerator {
 	}
 
 
-	protected void generateCode(String tableName, String srcFolder, String packagePath,Connection connection,Map<String,Document> configFileMap,boolean createSpringService,boolean createSpringDao, String modulePrefix) throws Exception, SQLException, IOException {
+	protected void generateCode(Connection connection, String tableName, Map<String,Document> configFileMap,CodegenParameters codegenParameters) throws  SQLException, IOException {
 		
 		
-		CgObject cgObject = new CgObject(tableName,srcFolder,packagePath);	 
+		CgObject cgObject = new CgObject(tableName,codegenParameters );	 
 		
-		cgObject.setCreateSpringService(createSpringService);
-		cgObject.setCreateSpringDao(createSpringDao);
-		
-		cgObject.setModulePrefix(modulePrefix);
-		
+ 		
 		Map<String,DBColumn> dbColumnMap = loadColumnMap(tableName,connection);
 		if(dbColumnMap==null || dbColumnMap.isEmpty()) return;
 		
@@ -608,7 +602,7 @@ public class CodeGenerator {
 	}
 
  
-	public Map<String, DBColumn> loadColumnMap(String tableName,Connection connection) throws Exception, SQLException {
+	public Map<String, DBColumn> loadColumnMap(String tableName,Connection connection) throws  SQLException {
 		PreparedStatement psmt = null;
 		ResultSet rs = null;
 		
@@ -679,11 +673,11 @@ public class CodeGenerator {
 
 	public static void main(String[] args) throws Exception {
 		CodeGenerator cg = new CodeGenerator();
-		Properties cgToolProperties = CGToolInfo.getInstance().getCgToolProperties();
-		String tableNames = cgToolProperties.getProperty("tableNames");
-		String srcFolder = StringUtil.isEmpty(cgToolProperties.getProperty("srcFolder")) ? System.getProperty("user.dir") + "\\cgsrc" : cgToolProperties.getProperty("srcFolder");
-		String packagePath =  StringUtil.isEmpty(cgToolProperties.getProperty("packagePath")) ? "com\\ir"   : cgToolProperties.getProperty("packagePath");
-		cg.execute(tableNames, srcFolder, packagePath);
+//		Properties cgToolProperties = CGToolInfo.getInstance().getCgToolProperties();
+//		String tableNames = cgToolProperties.getProperty("tableNames");
+//		String srcFolder = StringUtil.isEmpty(cgToolProperties.getProperty("srcFolder")) ? System.getProperty("user.dir") + "\\cgsrc" : cgToolProperties.getProperty("srcFolder");
+//		String packagePath =  StringUtil.isEmpty(cgToolProperties.getProperty("packagePath")) ? "com\\ir"   : cgToolProperties.getProperty("packagePath");
+		cg.execute();
 		System.out.println("Successfully generated the source");
 	}
 
