@@ -22,6 +22,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -79,16 +80,18 @@ public class CodeGenerator {
 			boolean createSpringService =new Boolean(StringUtil.nullCheck(CGToolInfo.getInstance().getCgToolProperties().getProperty("createSpringService"), "FALSE"));
 			boolean createSpringDao =new Boolean(StringUtil.nullCheck(CGToolInfo.getInstance().getCgToolProperties().getProperty("createSpringDao"), "FALSE"));
 			
+			String modulePrefix = CGToolInfo.getInstance().getCgToolProperties().getProperty("modulePrefix");
 			
 			Map<String,Document> configFileMap = new HashMap<String, Document>();
 			
 			if(createSpringService) configFileMap.put(SERVICE_CONFIG_XML,getNewDocument());
 			if(createSpringDao) configFileMap.put(DAO_CONFIG_XML,getNewDocument());
-		 	
 			
+			String basefolder = CGToolInfo.getInstance().getCgToolProperties().getProperty("basefolder");
+			String configFileDir = CGToolInfo.getInstance().getCgToolProperties().getProperty("configFileDir");
 			
 			for(String table : tableList){
-				generateCode(table, srcFolder, packagePath,connection,configFileMap,createSpringService,createSpringDao);
+				generateCode(table, srcFolder, packagePath,connection,configFileMap,createSpringService,createSpringDao,modulePrefix);
 			}
 			
 			
@@ -96,8 +99,7 @@ public class CodeGenerator {
 				 TransformerFactory transformerFactory = TransformerFactory.newInstance();
 			     Transformer transformer =  transformerFactory.newTransformer();
 			     DOMSource source = new DOMSource(configFileMap.get(SERVICE_CONFIG_XML));
-			     StreamResult result = new StreamResult(new File(srcFolder+"//"+packagePath+"//service",SERVICE_CONFIG_XML));
-			     System.out.println(result.getSystemId());
+			     StreamResult result = new StreamResult(new File(basefolder+"\\"+configFileDir,SERVICE_CONFIG_XML));
 			     transformer.transform(source, result);
 		    }
 			
@@ -105,7 +107,7 @@ public class CodeGenerator {
 				 TransformerFactory transformerFactory = TransformerFactory.newInstance();
 			     Transformer transformer =  transformerFactory.newTransformer();
 			     DOMSource source = new DOMSource(configFileMap.get(DAO_CONFIG_XML));
-			     StreamResult result = new StreamResult(new File(srcFolder+"//"+packagePath+"//dao" , DAO_CONFIG_XML));
+			     StreamResult result = new StreamResult(new File(basefolder+"\\"+configFileDir,DAO_CONFIG_XML));
 			     transformer.transform(source, result);
 	 	 	}
 		    
@@ -120,14 +122,30 @@ public class CodeGenerator {
 
 	private Document getNewDocument() throws ParserConfigurationException {
 		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-		DocumentBuilder dBuilder = 
-		dbFactory.newDocumentBuilder();
-		Document doc = dBuilder.newDocument();
+		DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+		Document document = dBuilder.newDocument();
+
+		Element rootElement = document.createElement("beans");
+
+		Attr attr = document.createAttribute("xmlns");
+		attr.setValue("http://www.springframework.org/schema/beans");
+		rootElement.setAttributeNode(attr);
+
+		attr = document.createAttribute("xmlns:xsi");
+		attr.setValue("http://www.w3.org/2001/XMLSchema-instance");
+		rootElement.setAttributeNode(attr);
+
+		attr = document.createAttribute("xmlns:context");
+		attr.setValue("http://www.springframework.org/schema/context");
+		rootElement.setAttributeNode(attr);
+
+		attr = document.createAttribute("xsi:schemaLocation");
+		attr.setValue(" http://www.springframework.org/schema/beans  http://www.springframework.org/schema/beans/spring-beans-3.0.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd http://cxf.apache.org/jaxrs http://cxf.apache.org/schemas/jaxrs.xsd");
+		rootElement.setAttributeNode(attr);
 		
-		Element rootElement = doc.createElement("beans");
-		doc.appendChild(rootElement);
-		
-		return doc;
+		document.appendChild(rootElement);
+
+		return document;
 	}
 
 
@@ -166,7 +184,7 @@ public class CodeGenerator {
 	}
 
 
-	protected void generateCode(String tableName, String srcFolder, String packagePath,Connection connection,Map<String,Document> configFileMap,boolean createSpringService,boolean createSpringDao) throws Exception, SQLException, IOException {
+	protected void generateCode(String tableName, String srcFolder, String packagePath,Connection connection,Map<String,Document> configFileMap,boolean createSpringService,boolean createSpringDao, String modulePrefix) throws Exception, SQLException, IOException {
 		
 		
 		CgObject cgObject = new CgObject(tableName,srcFolder,packagePath);	 
@@ -174,6 +192,7 @@ public class CodeGenerator {
 		cgObject.setCreateSpringService(createSpringService);
 		cgObject.setCreateSpringDao(createSpringDao);
 		
+		cgObject.setModulePrefix(modulePrefix);
 		
 		Map<String,DBColumn> dbColumnMap = loadColumnMap(tableName,connection);
 		if(dbColumnMap==null || dbColumnMap.isEmpty()) return;

@@ -52,6 +52,8 @@ public class CgObject {
 
 	private DBColumn pk = null ; 
 	
+	private String modulePrefix = null ; 
+	
 	public CgObject(String tableName, String srcFolder, String srcPackage) {
 		super();
 		this.tableName = tableName;
@@ -389,6 +391,14 @@ public class CgObject {
 		this.pk = pk;
 	}
 
+	public String getModulePrefix() {
+		return modulePrefix;
+	}
+
+	public void setModulePrefix(String modulePrefix) {
+		this.modulePrefix = modulePrefix;
+	}
+
 	@Override
 	public String toString() {
 		return "CgObject [tableName=" + tableName + ", srcFolder=" + srcFolder
@@ -422,20 +432,20 @@ public class CgObject {
 		getServiceImplExt().generateCode();
 		
 		if(createSpringService){
-			addSpringBeans( configFileMap.get(CodeGenerator.SERVICE_CONFIG_XML),getServiceImplExt());
+			addSpringBeans( configFileMap.get(CodeGenerator.SERVICE_CONFIG_XML),getServiceExt(),getServiceImplExt());
 		}
 		
 		if(createSpringDao){
-			addSpringBeans( configFileMap.get(CodeGenerator.DAO_CONFIG_XML),getDaoImplExt());
+			addSpringBeans( configFileMap.get(CodeGenerator.DAO_CONFIG_XML),getDaoExt(),getDaoImplExt());
 		}
 	}
 
-	private void addSpringBeans( Document document, JavaSource src) {
+	private void addSpringBeans( Document document, JavaSource base , JavaSource impl) {
 		  Attr idAttr =  document.createAttribute("id");
-          idAttr.setValue("ba-"+src.getNameForVariable());
+          idAttr.setValue(getModulePrefix()+"-"+base.getNameForVariable());
           
           Attr classAttr =  document.createAttribute("class");
-          classAttr.setValue(src.getSourcePackage()+"."+src.getName());
+          classAttr.setValue(impl.getSourcePackage()+"."+impl.getName());
           
           Element newBean = document.createElement("bean");
           newBean.setAttributeNode(idAttr);
