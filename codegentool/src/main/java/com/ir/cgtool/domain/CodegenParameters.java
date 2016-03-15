@@ -26,8 +26,10 @@ public class CodegenParameters {
 	
 	public CodegenParameters(Properties cgToolProperties) {
 		setTableNames(cgToolProperties.getProperty("tableNames"));
-  		setSrcFolder(StringUtil.isEmpty(cgToolProperties.getProperty("srcFolder")) ? System.getProperty("user.dir") + "\\cgsrc" : cgToolProperties.getProperty("srcFolder"));
-		setSrcPackage(StringUtil.isEmpty(cgToolProperties.getProperty("srcPackage")) ? "com\\ir"   : cgToolProperties.getProperty("srcPackage"));
+		setSrcFolder(StringUtil.isEmpty(cgToolProperties.getProperty("srcFolder"))
+				? System.getProperty("user.dir") + "\\cgsrc" : cgToolProperties.getProperty("srcFolder"));
+		setSrcPackage(StringUtil.isEmpty(cgToolProperties.getProperty("srcPackage")) ? "com\\ir"
+				: cgToolProperties.getProperty("srcPackage"));
 		setCreateSpringService(
 				new Boolean(StringUtil.nullCheck(cgToolProperties.getProperty("createSpringService"), "FALSE")));
 		setCreateSpringDao(new Boolean(StringUtil.nullCheck(cgToolProperties.getProperty("createSpringDao"), "FALSE")));
@@ -112,6 +114,24 @@ public class CodegenParameters {
 	public String getConfigFileLocation() {
 		return  getBasefolder()+"\\"+ getConfigFileDir();
 	}
-	
+	 
+	public String getDaoImplPackage() {
+		return getPackagePath().concat(".dao.impl");
+	}
 
+	public String getDaoBaseImplPackage() {
+		return getPackagePath().concat(".dao.cg.impl");
+	}
+
+	public String getDaoPackage() {
+		return getPackagePath().concat(".dao");
+	}
+
+	public String getDaoBasePackage() {
+		return getPackagePath().concat(".dao.cg");
+	}
+
+	public String getSrcFolderForPackage(String packageName) {
+ 		return getSrcFolder().concat("\\").concat(packageName).replace(".", "\\");
+	}
 }

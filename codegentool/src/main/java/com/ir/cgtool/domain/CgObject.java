@@ -153,12 +153,12 @@ public class CgObject {
 	}
 
 	private JavaSource prepareDao() {
-		JavaSource daoBase = new JavaSource("interface", javaClassName+"DaoBase" , getPackagePath().concat(".dao.cg"), getSrcFolder()+"\\"+getSrcPackage()+"\\dao\\cg", false);
+		JavaSource daoBase = new JavaSource("interface", javaClassName+"DaoBase" , getDaoBasePackage(), getSrcFolderForPackage(getDaoBasePackage()) , false);
 	    setDaoBase(daoBase);
 	    getDaoBase().getImportList().add(domainExt.getFullName()); 
 	    
 	    
-	    JavaSource daoExt = new JavaSource("interface", javaClassName+"Dao" , getPackagePath().concat(".dao"), getSrcFolder()+"\\"+getSrcPackage()+"\\dao", false);
+	    JavaSource daoExt = new JavaSource("interface", javaClassName+"Dao" , getDaoPackage(), getSrcFolderForPackage(getDaoPackage()) , false);
 	    daoExt.setSuperClassAssociationType("extends");
 	    daoExt.setSuperClassName(daoBase.getName());
 	    daoExt.getImportList().add(daoBase.getFullName());
@@ -166,7 +166,7 @@ public class CgObject {
 	    setDaoExt(daoExt);	    
 	    
 		
-	    JavaSource daoImpl = new JavaSource("class", javaClassName+"DaoBaseImpl", getPackagePath().concat(".dao.cg.impl"), getSrcFolder()+"\\"+getSrcPackage()+"\\dao\\cg\\impl", true);
+	    JavaSource daoImpl = new JavaSource("class", javaClassName+"DaoBaseImpl", getDaoBaseImplPackage(), getSrcFolderForPackage(getDaoBaseImplPackage()), true);
 	    daoImpl.setSuperClassAssociationType("implements");
 	    daoImpl.setSuperClassName(daoBase.getName());
 	    setDaoBaseImpl(daoImpl);
@@ -203,7 +203,7 @@ public class CgObject {
 	    getDaoBaseImpl().getMethodList().add(new Method("public", "void", "set"+domainHelperExt.getName(), params,setMethodBody.toString()));
 		
 	    
-	    JavaSource daoImplExt = new JavaSource("class", javaClassName+"DaoImpl", getPackagePath().concat(".dao.impl"), getSrcFolder()+"\\"+getSrcPackage()+"\\dao\\impl", true);
+	    JavaSource daoImplExt = new JavaSource("class", javaClassName+"DaoImpl", getDaoImplPackage(), getSrcFolderForPackage(getDaoImplPackage()) , true);
 	    
 	    daoImplExt.getImplmentionList().add(daoExt.getName());
 	    
@@ -216,6 +216,10 @@ public class CgObject {
 	    setDaoImplExt(daoImplExt);
 		return daoBase;
 	}
+
+	
+
+	
 
 	private JavaSource prepareDomainHelper() {
 		JavaSource domainHelper = new JavaSource("class", javaClassName+"HelperBase", getPackagePath().concat(".domain.cg"), getSrcFolder()+"\\"+getSrcPackage()+"\\domain\\cg", false);
@@ -250,11 +254,7 @@ public class CgObject {
 	public void setTableName(String tableName) {
 		this.tableName = tableName;
 	}
-
-	
-	 
-	
-	
+ 	
 
 	public CodegenParameters getCodegenParameters() {
 		return codegenParameters;
@@ -289,7 +289,27 @@ public class CgObject {
 	public String getModulePrefix() {
 		return codegenParameters.getModulePrefix();
 	}
-	 
+
+	private String getDaoImplPackage() {
+		return codegenParameters.getDaoImplPackage();
+	}
+
+	private String getDaoBaseImplPackage() {
+		return codegenParameters.getDaoBaseImplPackage();
+	}
+
+	private String getDaoPackage() {
+		return codegenParameters.getDaoPackage();
+	}
+
+	private String getDaoBasePackage() {
+		return codegenParameters.getDaoBasePackage();
+	}
+	
+	public String getSrcFolderForPackage(String packageName) {
+		return codegenParameters.getSrcFolderForPackage(packageName);
+	}
+	
 	public JavaSource getDomain() {
 		return domain;
 	}
