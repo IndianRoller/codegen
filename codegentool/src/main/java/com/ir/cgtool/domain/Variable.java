@@ -1,108 +1,121 @@
 package com.ir.cgtool.domain;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.ir.cgtool.util.CodeGenUtil;
 import com.ir.util.StringUtil;
 
 public class Variable {
+
+	public static final String PARAM_MODE_EXE = "EXE";
+
+	public static final String PARAM_MODE_DECL = "DECL";
+
+	private String name = null;
+
+	private String type = null;
+
+	private String access = null;
+
+	private String initVal = null;
+
+	private List<String> annotations = new ArrayList<String>(1);
 	
-public static final String PARAM_MODE_EXE = "EXE" ; 
+	public Variable(String name, String type, String access) {
+		super();
 
-public static final String PARAM_MODE_DECL = "DECL" ; 
+		setName(name);
 
+		this.type = type;
+		this.access = access;
+	}
 
-private String name = null ; 
+	public String getName() {
+		if (getAccess().equalsIgnoreCase("public static final"))
+			return name.toUpperCase();
+		return name;
+	}
 
-private String type = null ; 
+	public void setName(String name) {
+		this.name = CodeGenUtil.toLowerCase(name, 0);
+	}
 
-private String access = null ;
+	public String getType() {
+		return type;
+	}
 
-private String initVal = null ; 
+	public void setType(String type) {
+		this.type = type;
+	}
 
-public Variable(String name, String type, String access) {
-	super();
+	public String getAccess() {
+		return access;
+	}
+
+	public void setAccess(String access) {
+		this.access = access;
+
+	}
+
+	public String getInitVal() {
+		return initVal;
+	}
+
+	public void setInitVal(String initVal) {
+		this.initVal = initVal;
+	}
 	
-	setName(name);
-	
-	this.type = type;
-	this.access = access;
-}
+	public List<String> getAnnotations() {
+		return annotations;
+	}
 
-public String getName() {
-	if(getAccess().equalsIgnoreCase("public static final")) return name.toUpperCase();
-	return name;
-}
+	public void setAnnotations(List<String> annotations) {
+		this.annotations = annotations;
+	}
 
-public void setName(String name) {
-	this.name = CodeGenUtil.toLowerCase(name, 0);
-}
+	public void addAnnotation(String annotation) {
+		getAnnotations().add(annotation);
+	}
 
-public String getType() {
-	return type;
-}
+	public String getInstanceVariableCode() {
+		StringBuffer sb = new StringBuffer();
+		for(String annotation : annotations )sb.append("\t@").append(annotation).append(StringUtil.LINE_SEPARTOR);
+		sb.append("\t").append(getAccess()).append(" ").append(getType()).append(" ").append(getName()).append(" = ")
+				.append(getColInitialization()).append("; ").append(StringUtil.LINE_SEPARTOR)
+				.append(StringUtil.LINE_SEPARTOR);
+		return sb.toString();
 
-public void setType(String type) {
-	this.type = type;
-}
+	}
 
-public String getAccess() {
-	return access;
-}
+	public String getInstanceVariableTestCode(String className) {
+		StringBuffer sb = new StringBuffer();
+		sb.append("\t").append("assertNull(").append(" ").append(className).append(".").append(getName()).append(");")
+				// .append(getColInitialization()).append("; ")
+				.append(StringUtil.LINE_SEPARTOR).append(StringUtil.LINE_SEPARTOR);
+		return sb.toString();
+	}
 
-public void setAccess(String access) {
-	this.access = access;
+	private String getColInitialization() {
 
-}
+		if (!StringUtil.isEmpty(getInitVal()))
+			return getInitVal();
 
-public String getInitVal() {
-	return initVal;
-}
+		if (getType().equals("Long") || getType().equals("String"))
+			return "null";
 
-public void setInitVal(String initVal) {
-	this.initVal = initVal;
-}
+		if (getType().equals("boolean"))
+			return "false";
 
-public String getInstanceVariableCode() {
-	StringBuffer sb = new StringBuffer();
-	sb.append("\t").append(getAccess()).append(" ").append(getType()).append(" ")
-			.append(getName()).append(" = ")
-			.append(getColInitialization()).append("; ")
-			.append(StringUtil.LINE_SEPARTOR)
-			.append(StringUtil.LINE_SEPARTOR);
-	return sb.toString();
-	
-} 
-
-public String getInstanceVariableTestCode(String className) {
-	StringBuffer sb = new StringBuffer();
-	sb.append("\t").append("assertNull(").append(" ").append(className).append(".").append(getName()).append(");")
-			//.append(getColInitialization()).append("; ")
-			.append(StringUtil.LINE_SEPARTOR)
-			.append(StringUtil.LINE_SEPARTOR);
-	return sb.toString();
-} 
-private String getColInitialization() {
-
-	if(!StringUtil.isEmpty(getInitVal())) return getInitVal();
-	
-	if (getType().equals("Long") || getType().equals("String"))
 		return "null";
+	}
 
-	if (getType().equals("boolean") )
-		return "false";
+	public String getParamCode(String mode) {
+		StringBuffer sb = new StringBuffer();
+		if (PARAM_MODE_DECL.equalsIgnoreCase(mode))
+			sb.append(getType()).append(" ");
+		sb.append(getName());
+		return sb.toString();
+	}
 
-	
-	return "null";
-}
-
-public String getParamCode(String mode) {
-	StringBuffer sb = new StringBuffer();
-	if(PARAM_MODE_DECL.equalsIgnoreCase(mode)) sb.append(getType()).append(" ");
-	sb.append(getName()); 
-	return sb.toString();
-}
-
-
-	
-	
-	
 }

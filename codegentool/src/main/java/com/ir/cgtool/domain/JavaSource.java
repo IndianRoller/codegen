@@ -37,7 +37,9 @@ public class JavaSource {
 	private boolean overwrite = true;
 
 	private boolean testClassRequired = false;
-
+	
+	private List<String> annotations = new ArrayList<String>();
+	
 	public JavaSource(String type, String name, String sourcePackage, String sourceFolder, boolean testClassRequired) {
 		super();
 		setType(type);
@@ -47,6 +49,7 @@ public class JavaSource {
 		setTestClassRequired(testClassRequired);
 	}
 
+	
 	public String getType() {
 		return type;
 	}
@@ -143,6 +146,20 @@ public class JavaSource {
 		this.testClassRequired = testClassRequired;
 	}
 
+	public List<String> getAnnotations() {
+		return annotations;
+	}
+
+	public void setAnnotations(List<String> annotations) {
+		this.annotations = annotations;
+	}
+
+	public void addAnnotation(String annotation, String annotationImport){
+		annotations.add(annotation);
+		getImportList().add(annotationImport);
+ 	}
+
+	
 	public String getFullName() {
 		return getSourcePackage().concat(".").concat(getName());
 	}
@@ -176,6 +193,9 @@ public class JavaSource {
 	
 	public String getSourceNameCode() {
 		StringBuffer content = new StringBuffer();
+		
+		for(String annotation : annotations )content.append("@").append(annotation).append(StringUtil.LINE_SEPARTOR);
+		
 		content.append("public ").append(getType()).append(" ")
 				.append(getName()).append(" ");
 
@@ -311,18 +331,18 @@ public class JavaSource {
 		return content.toString();
 	}
 
-	private Object getInstanceVariablesTestCode() {
-		if (getVariableList().isEmpty()) return "";
-
-		StringBuffer content = new StringBuffer("public void testGetterSetters() {").append(StringUtil.LINE_SEPARTOR);
-
-		for (Variable variable : getVariableList()) {
-			content.append(variable.getInstanceVariableTestCode(getName()));
-		}
-		
-		content.append(" } ").append(StringUtil.LINE_SEPARTOR);
-		return content.toString();
-	}
+//	private Object getInstanceVariablesTestCode() {
+//		if (getVariableList().isEmpty()) return "";
+//
+//		StringBuffer content = new StringBuffer("public void testGetterSetters() {").append(StringUtil.LINE_SEPARTOR);
+//
+//		for (Variable variable : getVariableList()) {
+//			content.append(variable.getInstanceVariableTestCode(getName()));
+//		}
+//		
+//		content.append(" } ").append(StringUtil.LINE_SEPARTOR);
+//		return content.toString();
+//	}
 	
 	public BufferedWriter getBufferdWriter() throws IOException {
 		File serviceDirectory = new File(getSourceFolder());
@@ -349,7 +369,72 @@ public class JavaSource {
 	public String getTestName() {
 		String testName = getName();
 		return testName + "Test" ;  	
-  }
+    }
 
+	public boolean isInterface(){
+		return "interface".equals(getType());
+	}
+	
+	public void addSupperClass(JavaSource superClass) {
+		if(superClass.isInterface() &&  isInterface()){
+			setSuperClassAssociationType("extends" );
+		}else {
+			setSuperClassAssociationType(superClass.isInterface()?"implements":"extends" );
+		}
+		 
+		setSuperClassName(superClass.getName());
+		getImportList().add(superClass.getFullName());
+	}
 
+	public void addDependency(JavaSource bean, List<String> methodAnnotations, boolean accessModifiersRequired) {
+		Variable beanInstanceRef = new Variable(bean.getName(), bean.getName(), "private"); 
+	    List<Variable> params = new ArrayList<Variable>();
+		params.add(beanInstanceRef);
+		
+		
+		getVariableList().add(beanInstanceRef);
+		
+		if(accessModifiersRequired){
+			 StringBuffer setMethodBody = new StringBuffer();
+			 setMethodBody.append("\t").append("\t").append("this.").append(bean.getNameForVariable()).append(" = ").append(bean.getNameForVariable()).append(";");
+			
+			 StringBuffer getMethodBody = new StringBuffer();
+			 getMethodBody.append("\t").append("\t").append("return ").append(bean.getNameForVariable()).append(";");
+			
+			 getMethodList().add(new Method("public", bean.getName(), "get"+CodeGenUtil.toUpperCase(bean.getName(), 0), new ArrayList<Variable>(),getMethodBody.toString()));
+			 getMethodList().add(new Method("public", "void", "set"+CodeGenUtil.toUpperCase(bean.getName(), 0), params,setMethodBody.toString()));
+		}
+		
+		if (methodAnnotations != null) {
+			for (String methodAnnotation : methodAnnotations) {
+				beanInstanceRef.addAnnotation(methodAnnotation.substring(methodAnnotation.lastIndexOf(".") + 1));
+				getImportList().add(methodAnnotation);
+			}
+		}
+		
+		getImportList().add(bean.getFullName());
+	}
+
+	public void addConstructor(List<JavaSource> dependenciesRef,List<JavaSource> dependenciesImpl) {
+		Method constructor = new Method();
+	    constructor.setConstructor(true);
+	    constructor.setName(getName());
+	    constructor.setAccess("public");
+	 
+	    StringBuffer constBody = new StringBuffer();
+	    int i=0;
+	    for(JavaSource beanRef : dependenciesRef) {
+	    	JavaSource bean =  dependenciesImpl==null || dependenciesImpl.isEmpty() ? beanRef : dependenciesImpl.get(i);
+	    	if(i>1) constBody.append(StringUtil.LINE_SEPARTOR);
+	    	constBody.append("\t").append("\t").append("this.").append(beanRef.getNameForVariable()).append(" = ").append("new ").append(bean.getName()).append("();");
+	     
+	    	if( dependenciesImpl !=null && !dependenciesImpl.isEmpty() ) getImportList().add(bean.getFullName());
+	    	
+	    	i++;
+	    }
+	    constructor.setBody(constBody.toString());
+ 	    
+	    getMethodList().add(constructor);
+	    
+	}
 }

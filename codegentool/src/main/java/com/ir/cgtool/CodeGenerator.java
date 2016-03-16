@@ -42,7 +42,7 @@ public class CodeGenerator {
 
 	public static final String SERVICE_CONFIG_XML = "service-config.xml";
 
-	public static final String ALL_TABLE_SQLSERVER = " SELECT TABLE_NAME  FROM  INFORMATION_SCHEMA.TABLES  " ;
+	public static final String ALL_TABLE_SQLSERVER = " SELECT TABLE_NAME  FROM  INFORMATION_SCHEMA.TABLES  WHERE TABLE_NAME <> 'SEQUENCES' " ;
 
 	public static final String COLUMN_SQL_SQLSERVER = " SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? ";
  
@@ -70,31 +70,27 @@ public class CodeGenerator {
 			 
 			File srcDir = new File(cgparams.getSrcFolder()+"//"+cgparams.getSrcPackage().replace(".", "//"));
 			if (!srcDir.exists()) srcDir.mkdirs();
-			 
+			  
 			 List<String> tableList = new ArrayList<String>();
 			if(StringUtil.isEmpty(cgparams.getTableNames())) {
 				  tableList = getTableList(connection);
 			}else{
 				tableList.add(cgparams.getTableNames());
 			}
-			 	
 			
+			cgparams.setConfigFileMap(new HashMap<String, Document>());
 			
-			Map<String,Document> configFileMap = new HashMap<String, Document>();
-			
-			if(cgparams.isCreateSpringService()) configFileMap.put(SERVICE_CONFIG_XML,getNewDocument());
-			if(cgparams.isCreateSpringDao()) configFileMap.put(DAO_CONFIG_XML,getNewDocument());
-			
+			if(cgparams.isCreateSpringService()) cgparams.getConfigFileMap().put(SERVICE_CONFIG_XML,getNewDocument());
+			if(cgparams.isCreateSpringDao()) cgparams.getConfigFileMap().put(DAO_CONFIG_XML,getNewDocument());
 			
 			for(String table : tableList){
-				generateCode(connection, table, configFileMap,cgparams);
+				generateCode(connection, table, cgparams);
 			}
-			
 			
 			if(cgparams.isCreateSpringService()) {
 				 TransformerFactory transformerFactory = TransformerFactory.newInstance();
 			     Transformer transformer =  transformerFactory.newTransformer();
-			     DOMSource source = new DOMSource(configFileMap.get(SERVICE_CONFIG_XML));
+			     DOMSource source = new DOMSource(cgparams.getConfigFileMap().get(SERVICE_CONFIG_XML));
 			     StreamResult result = new StreamResult(new File(cgparams.getConfigFileLocation(),SERVICE_CONFIG_XML));
 			     transformer.transform(source, result);
 		    }
@@ -102,7 +98,7 @@ public class CodeGenerator {
 			if(cgparams.isCreateSpringDao()) {
 				 TransformerFactory transformerFactory = TransformerFactory.newInstance();
 			     Transformer transformer =  transformerFactory.newTransformer();
-			     DOMSource source = new DOMSource(configFileMap.get(DAO_CONFIG_XML));
+			     DOMSource source = new DOMSource(cgparams.getConfigFileMap().get(DAO_CONFIG_XML));
 			     StreamResult result = new StreamResult(new File(cgparams.getConfigFileLocation(),DAO_CONFIG_XML));
 			     transformer.transform(source, result);
 	 	 	}
@@ -182,7 +178,7 @@ public class CodeGenerator {
 	}
 
 
-	protected void generateCode(Connection connection, String tableName, Map<String,Document> configFileMap,CodegenParameters codegenParameters) throws  SQLException, IOException {
+	protected void generateCode(Connection connection, String tableName, CodegenParameters codegenParameters) throws  SQLException, IOException {
 		
 		
 		CgObject cgObject = new CgObject(tableName,codegenParameters );	 
@@ -209,6 +205,7 @@ public class CodeGenerator {
 		List<DBColumn> dbCols = new ArrayList<DBColumn>();
 		
 		while (itr.hasNext()) {
+			//TODO move this to JavaSource class
 			DBColumn dbColumn = dbColumnMap.get(itr.next());
 			String colName = CodeGenUtil.toUpperCase(dbColumn.getColumnName(), 0);
 			
@@ -326,7 +323,7 @@ public class CodeGenerator {
 		//saveMethod(cgObject,true , "add");
 
 		saveMethod(cgObject,false , "update");
-		cgObject.generateCode(configFileMap);
+		cgObject.generateCode();
 	}
 
 
@@ -407,7 +404,7 @@ public class CodeGenerator {
 		 StringBuffer methodBodyServiceImpl  = new StringBuffer();
 		 methodBodyServiceImpl.append("\t").append("\t");
 		 if(!"update".equalsIgnoreCase(type))    methodBodyServiceImpl.append("return ");
-		 methodBodyServiceImpl.append(cgObject.getDaoBase().getNameForVariable()).append(".").append(methodName).append("(")
+		 methodBodyServiceImpl.append(cgObject.getDaoExt().getNameForVariable()).append(".").append(methodName).append("(")
 		 					  .append(Method.getParamCode(params,Variable.PARAM_MODE_EXE)).append(")").append(";");
 		 
 		 
@@ -507,7 +504,7 @@ public class CodeGenerator {
 		 daoImplMethod.getThrownExceptions().add("Exception");
 		 
 		 StringBuffer methodBodyServiceImpl = new StringBuffer();
-		 methodBodyServiceImpl.append("\t").append("\t").append(cgObject.getDaoBase().getNameForVariable()).append(".").append(methodName).append("(").append(dbColumn.getColumnName()).append(")").append(";");
+		 methodBodyServiceImpl.append("\t").append("\t").append(cgObject.getDaoExt().getNameForVariable()).append(".").append(methodName).append("(").append(dbColumn.getColumnName()).append(")").append(";");
 		 Method serviceMethod = new Method("public","void", "delete"+cgObject.getDomainExt().getName()+"By"+colName, params  , methodBodyServiceImpl.toString());
 		 serviceMethod.getThrownExceptions().add("Exception");
 		 cgObject.getServiceBaseImpl().getMethodList().add(serviceMethod);
@@ -524,15 +521,18 @@ public class CodeGenerator {
 		String returnTypeInit = "null" ; 
 		String sql = null ;
 		String methodName = null;
+		
+		String annotation = null; 
+		String annotationImp = null; 
 		 
 		if(dbColumn!=null) {
 			params.add(new Variable(dbColumn.getColumnName(), dbColumn.getColumnType(), "private"));
 			colName = CodeGenUtil.toUpperCase(dbColumn.getColumnName(), 0);
 			sql = "\" SELECT * FROM " + tableName + " WHERE " +  dbColumn.getDbColumnName() + " = ?  \" " ;
-			  methodName = "load"+cgObject.getDomainExt().getName()+"By"+colName ;
+			methodName = "get"+cgObject.getDomainExt().getName()+"By"+colName ;
 		}else{
 		    sql = "\" SELECT * FROM " + tableName + " \" " ; 
-		    methodName = "loadAll"+cgObject.getDomainExt().getName()+"s" ;
+		    methodName = "get"+cgObject.getDomainExt().getName()+"s" ;
 		}
 		
 		 if(dbColumn==null || dbColumn.isRefKeyColumn()){
@@ -593,13 +593,26 @@ public class CodeGenerator {
 		 cgObject.getDaoBaseImpl().getMethodList().add(m);
 		 
 		 StringBuffer methodBodyServiceImpl = new StringBuffer();
-		 methodBodyServiceImpl.append("\t").append("\t").append("return ").append(cgObject.getDaoBase().getNameForVariable()).append(".").append(methodName).append("(")
+		 methodBodyServiceImpl.append("\t").append("\t").append("return ").append(cgObject.getDaoExt().getNameForVariable()).append(".").append(methodName).append("(")
 		 .append(dbColumn!=null ? dbColumn.getColumnName():"")
 		 .append(")").append(";");
+		 
 		 Method serviceMethod =  new Method("public",returnType, methodName , params  , methodBodyServiceImpl.toString());
 		 serviceMethod.getThrownExceptions().add("Exception");
 		 cgObject.getServiceBaseImpl().getMethodList().add(serviceMethod);
-	}
+		 
+		 
+		 StringBuffer methodBodyRestSvc = new StringBuffer();
+		 methodBodyRestSvc.append("\t").append("\t").append("return ").append(cgObject.getServiceExt().getNameForVariable()).append(".").append(methodName).append("(")
+		 .append(dbColumn!=null ? dbColumn.getColumnName():"")
+		 .append(")").append(";");
+		 
+		 Method restMethod =  new Method("public",returnType, methodName , params  , methodBodyRestSvc.toString());
+		 restMethod.getThrownExceptions().add("Exception");
+		 
+		 restMethod.addAnnotation("GET");
+		 cgObject.getRestService().getMethodList().add(restMethod);
+ 	}
 
  
 	public Map<String, DBColumn> loadColumnMap(String tableName,Connection connection) throws  SQLException {
@@ -673,10 +686,6 @@ public class CodeGenerator {
 
 	public static void main(String[] args) throws Exception {
 		CodeGenerator cg = new CodeGenerator();
-//		Properties cgToolProperties = CGToolInfo.getInstance().getCgToolProperties();
-//		String tableNames = cgToolProperties.getProperty("tableNames");
-//		String srcFolder = StringUtil.isEmpty(cgToolProperties.getProperty("srcFolder")) ? System.getProperty("user.dir") + "\\cgsrc" : cgToolProperties.getProperty("srcFolder");
-//		String packagePath =  StringUtil.isEmpty(cgToolProperties.getProperty("packagePath")) ? "com\\ir"   : cgToolProperties.getProperty("packagePath");
 		cg.execute();
 		System.out.println("Successfully generated the source");
 	}

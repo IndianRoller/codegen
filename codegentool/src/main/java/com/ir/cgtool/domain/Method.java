@@ -24,6 +24,8 @@ public class Method {
 	
 	private List<String> thrownExceptions = new ArrayList<String>();
 	
+	private List<String> annotations = new ArrayList<String>();
+	
 	
 	public Method(String access, String returnType, String name, List<Variable> params, String body) {
 		super();
@@ -114,8 +116,21 @@ public class Method {
 		this.thrownExceptions = thrownExceptions;
 	}
 
-	public String getMethodText() {
+	public List<String> getAnnotations() {
+		return annotations;
+	}
+
+	public void setAnnotations(List<String> annotations) {
+		this.annotations = annotations;
+	}
+
+	public void addAnnotation(String annotation){
+		annotations.add(annotation);
+  	}
+
+ 	public String getMethodText() {
 		StringBuffer sb = new StringBuffer();
+		for(String annotation : annotations )sb.append("\t@").append(annotation).append(StringUtil.LINE_SEPARTOR);
 		sb.append("\t").append(getAccess()).append(" ");
 		if(!isConstructor()) sb.append(getReturnType()).append(" ");
 		sb.append(getName())
