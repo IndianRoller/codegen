@@ -2,6 +2,7 @@ package com.ir.cgtool.domain;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.w3c.dom.Attr;
@@ -71,6 +72,7 @@ public class CgObject {
 
 	private void prepareService() {
 		setServiceBase(new JavaSource("interface", javaClassName+"ServiceBase" ,   getSvcBasePackage(), getSrcFolderForPackage(getSvcBasePackage()) , false));
+		
 	    
 	    setServiceExt(new JavaSource("interface", javaClassName+"Service" , getSvcPackage(), getSrcFolderForPackage(getSvcPackage()) ,  false));
  	    getServiceExt().addSupperClass(getServiceBase());
@@ -80,8 +82,7 @@ public class CgObject {
 	    setServiceBaseImpl(new JavaSource("class", javaClassName+"ServiceBaseImpl",getSvcBaseImplPackage(), getSrcFolderForPackage(getSvcBaseImplPackage()) ,   true));
 	    getServiceBaseImpl().addSupperClass(getServiceBase());
  	    getServiceBaseImpl().addDependency(getDaoExt(), null, true);
- 	    
- 	   
+ 	    getServiceBaseImpl().applySort(true);
  	   
 		 
 		
@@ -114,6 +115,7 @@ public class CgObject {
 		methodAnnoations.add("org.springframework.beans.factory.annotation.Autowired");
 		
 		getRestService().addDependency(getServiceExt(), methodAnnoations, false);
+		getRestService().applySort(true);
  	     
 	}
  
@@ -146,7 +148,12 @@ public class CgObject {
 		
 		getRestService().getImportList().add("java.util.List");
 		getRestService().getImportList().add("javax.ws.rs.GET");
+		getRestService().getImportList().add("javax.ws.rs.POST");
+		getRestService().getImportList().add("javax.ws.rs.PUT");
 		getRestService().getImportList().add("javax.ws.rs.PathParam");
+		getRestService().getImportList().add("javax.ws.rs.DELETE");
+		
+		
 		getRestService().getImportList().add(getDomainExt().getFullName());
 	}
 
@@ -161,14 +168,13 @@ public class CgObject {
 	    
 		
 	    setDaoBaseImpl(new JavaSource("class", javaClassName+"DaoBaseImpl", getDaoBaseImplPackage(), getSrcFolderForPackage(getDaoBaseImplPackage()), true));
- 
 	    getDaoBaseImpl().addSupperClass(getDaoBase());
-	    
 	    getDaoBaseImpl().addDependency(getDomainHelperExt(), null, true);
 	    
 	    List<JavaSource> dependenciesRef = new ArrayList<JavaSource>();
  	    dependenciesRef.add(getDomainHelperExt());
  	    getDaoBaseImpl().addConstructor(dependenciesRef,null);
+ 	    getDaoBaseImpl().applySort(true);
 	  
 	    
 	    setDaoImplExt(new JavaSource("class", javaClassName+"DaoImpl", getDaoImplPackage(), getSrcFolderForPackage(getDaoImplPackage()) , true));
@@ -177,6 +183,7 @@ public class CgObject {
 	    
 
  	    getDaoImplExt().setOverwrite(false);
+ 	    
  	    
 		if (isCreateSpringDao()) {
 			addSpringBeans(getCodegenParameters().getConfigFileMap().get(CodeGenerator.DAO_CONFIG_XML), getDaoExt(),
@@ -436,8 +443,9 @@ public class CgObject {
 		
 		getDomainHelper().generateCode();
  		getDomainHelperExt().generateCode();
-
-		getDaoBase().generateCode();
+	 
+		
+ 		getDaoBase().generateCode();
 		getDaoExt().generateCode();
 		
 		getDaoBaseImpl().generateCode();

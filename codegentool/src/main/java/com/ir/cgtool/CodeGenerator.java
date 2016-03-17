@@ -364,11 +364,15 @@ public class CodeGenerator {
 
 	protected void saveMethod(CgObject cgObject,boolean multiple,String type) {
 		 List<Variable> params = new ArrayList<Variable>();
+		 List<Variable> restSvcParams = new ArrayList<Variable>();
+		 
 		 String methodName = null ; 
-		 Variable variable =  null; 
-		 String returnType = null ; 
+ 		 Variable variable =  null; 
+ 		 String returnType = null ; 
 		 String returnTypeImpl = null ; 
- 
+		 String methodAnnotation = null; 
+		  
+		 
 		 
 		 if("update".equalsIgnoreCase(type)){
 			  returnType =  "void" ;
@@ -379,26 +383,32 @@ public class CodeGenerator {
 				 params.add(variable);
 				 returnType =   "List<Long>" ;
 				 returnTypeImpl = "new ArrayList<Long>()";
-	 			 }else {
-				   variable = new Variable(cgObject.getDomainExt().getName(), cgObject.getDomainExt().getName(), "private");
-				   params.add(variable);
-			 }
-	      }else {
-			  methodName =  "add"+cgObject.getDomainExt().getName() ;
-			 if(multiple){
-				 variable = new Variable(cgObject.getDomainExt().getName()+"s", "List<"+cgObject.getDomainExt().getName()+">", "private");
-				 params.add(variable);
-				 returnType =   "List<Long>" ;
-				 returnTypeImpl = "new ArrayList<Long>()";
-			  }else {
-				   variable = new Variable(cgObject.getDomainExt().getName(), cgObject.getDomainExt().getName(), "private");
-				   returnType =  "Long" ;
-	//			   returnTypeImpl = "Long(0)";
-					 returnTypeImpl = cgObject.getDomainExt().getNameForVariable()+"."+cgObject.getPk().getMethodName() + "()" ; 
-
-				   params.add(variable);
-			 	 }
-	      	}
+			} else {
+				variable = new Variable(cgObject.getDomainExt().getName(), cgObject.getDomainExt().getName(),"private");
+				params.add(variable);
+				Variable restParamVar = new Variable(cgObject.getPk().getColumnName(), cgObject.getPk().getColumnType(),"private");
+				restParamVar.addAnnotation("PathParam(\"" + cgObject.getPk().getColumnName() + "\")");
+				restSvcParams.add(restParamVar);
+				restSvcParams.add(variable);
+				methodAnnotation = "PUT";
+			}
+		} else {
+			methodName = "add" + cgObject.getDomainExt().getName();
+			if (multiple) {
+				variable = new Variable(cgObject.getDomainExt().getName() + "s", "List<" + cgObject.getDomainExt().getName() + ">", "private");
+				params.add(variable);
+				returnType = "List<Long>";
+				returnTypeImpl = "new ArrayList<Long>()";
+			} else {
+				variable = new Variable(cgObject.getDomainExt().getName(), cgObject.getDomainExt().getName(), "private");
+				returnType = "Long";
+				returnTypeImpl = cgObject.getDomainExt().getNameForVariable() + "." + cgObject.getPk().getMethodName() + "()";
+				params.add(variable);
+  
+				restSvcParams.add(variable);
+				methodAnnotation = "POST";
+			}
+		}
 		 
 		 StringBuffer methodBodyDaoImpl = getDaoImplMethodBody(cgObject, returnTypeImpl,type,null);
 		 StringBuffer methodBodyServiceImpl  = new StringBuffer();
@@ -407,10 +417,7 @@ public class CodeGenerator {
 		 methodBodyServiceImpl.append(cgObject.getDaoExt().getNameForVariable()).append(".").append(methodName).append("(")
 		 					  .append(Method.getParamCode(params,Variable.PARAM_MODE_EXE)).append(")").append(";");
 		 
-		 
-		 
-		 
-		 
+		 	 
 		 Method method = new Method("public",returnType, methodName, params  , null,true);
 		 method.getThrownExceptions().add("Exception");
 		 cgObject.getDaoBase().getMethodList().add(method);
@@ -424,6 +431,36 @@ public class CodeGenerator {
 		 method = new Method("public",returnType, methodName, params  , methodBodyServiceImpl.toString(),false);
 		 method.getThrownExceptions().add("Exception");
 		 cgObject.getServiceBaseImpl().getMethodList().add(method);
+		 
+		 if(!multiple){
+			 DBColumn dbColumn = cgObject.getPk();
+			 String colName = CodeGenUtil.toUpperCase(dbColumn.getColumnName(), 0);
+			 String getMethodName =  "get"+cgObject.getDomainExt().getName();
+			 
+			 StringBuffer methodBodyRestSvc  = new StringBuffer();
+			 methodBodyRestSvc.append("\t").append("\t");
+			 if("update".equalsIgnoreCase(type)){ 
+				 methodBodyRestSvc.append(cgObject.getDomainExt().getNameForVariable()).append(".set").append(colName).append("(").append(dbColumn.getColumnName()).append(");").append(StringUtil.LINE_SEPARTOR);
+				 methodBodyRestSvc.append("\t").append("\t");
+			 }else{
+				 methodBodyRestSvc.append(dbColumn.getColumnType()).append(" ").append(dbColumn.getColumnName()).append(" = ");
+			 }
+			
+			 methodBodyRestSvc.append(cgObject.getServiceExt().getNameForVariable()).append(".").append(methodName).append("(")
+			 					  .append(Method.getParamCode(params,Variable.PARAM_MODE_EXE)).append(")").append(";").append(StringUtil.LINE_SEPARTOR);
+			 
+			 methodBodyRestSvc.append("\t").append("\t").append("return ").append(cgObject.getServiceExt().getNameForVariable()).append(".").append(getMethodName).append("(")
+			 .append(dbColumn!=null ? dbColumn.getColumnName():"")
+			 .append(")").append(";");
+			 
+			 method = new Method("public",cgObject.getDomainExt().getName(), methodName, restSvcParams  , methodBodyRestSvc.toString(),false);
+			 method.addAnnotation(methodAnnotation);
+			 if("update".equalsIgnoreCase(type)) method.addAnnotation("PathParam(\"/{"+cgObject.getPk().getColumnName()+"}\")");
+			 method.getThrownExceptions().add("Exception");
+			 cgObject.getRestService().getMethodList().add(method);
+		 }
+		
+		 
 	}
 
 
@@ -489,10 +526,19 @@ public class CodeGenerator {
 		Variable variable = new Variable(dbColumn.getColumnName(), dbColumn.getColumnType(), "private");
 		List<Variable> params = new ArrayList<Variable>();
 		params.add(variable);
+		
+		
+		Variable restParamVar = new Variable(dbColumn.getColumnName(), dbColumn.getColumnType(), "private");
+		restParamVar.addAnnotation("PathParam(\""+dbColumn.getColumnName()+"\")");
+		List<Variable> restSvcParams = new ArrayList<Variable>();
+		restSvcParams.add(restParamVar);
+ 
 		String colName = CodeGenUtil.toUpperCase(dbColumn.getColumnName(), 0);
 		 	 
 		 //delete
-		 String methodName = "delete"+cgObject.getDomainExt().getName()+"By"+colName ;
+		 String methodName = "delete"+cgObject.getDomainExt().getName();
+		 if(!dbColumn.isPrimaryKeyColumn() )methodName =  methodName.concat("By").concat(colName);
+		 
 		 Method method = new Method("public","void", methodName, params  , null,true);
 		 method.getThrownExceptions().add("Exception");
 		 cgObject.getDaoBase().getMethodList().add(method);
@@ -505,9 +551,30 @@ public class CodeGenerator {
 		 
 		 StringBuffer methodBodyServiceImpl = new StringBuffer();
 		 methodBodyServiceImpl.append("\t").append("\t").append(cgObject.getDaoExt().getNameForVariable()).append(".").append(methodName).append("(").append(dbColumn.getColumnName()).append(")").append(";");
-		 Method serviceMethod = new Method("public","void", "delete"+cgObject.getDomainExt().getName()+"By"+colName, params  , methodBodyServiceImpl.toString());
+		 Method serviceMethod = new Method("public","void", methodName, params  , methodBodyServiceImpl.toString());
 		 serviceMethod.getThrownExceptions().add("Exception");
 		 cgObject.getServiceBaseImpl().getMethodList().add(serviceMethod);
+		 
+		 
+		 StringBuffer methodBodyRestService  = new StringBuffer();
+		 methodBodyRestService.append("\t").append("\t").append(cgObject.getServiceExt().getNameForVariable()).append(".").append(methodName).append("(").append(dbColumn.getColumnName()).append(")").append(";");
+	
+		 
+		 Method restMethod = new Method("public","void", methodName , restSvcParams  , methodBodyRestService.toString());
+		 restMethod.addAnnotation("DELETE");
+		 
+		 if ( dbColumn.isPrimaryKeyColumn()) {
+				restMethod.addAnnotation("Path(\"/{" + dbColumn.getColumnName() + "}\")");
+			} else if (dbColumn != null && (dbColumn.isRefKeyColumn() || dbColumn.isUniqueKeyColumn())) {
+				restMethod.addAnnotation("Path(\"/" + dbColumn.getColumnName()+"/{"+dbColumn.getColumnName()+"}" + "\")");
+			}
+		 
+		 restMethod.getThrownExceptions().add("Exception");
+		 
+	
+		 
+		 cgObject.getRestService().getMethodList().add(restMethod);
+		 
 	}
 
 
@@ -532,7 +599,9 @@ public class CodeGenerator {
 			
 			colName = CodeGenUtil.toUpperCase(dbColumn.getColumnName(), 0);
 			sql = "\" SELECT * FROM " + tableName + " WHERE " +  dbColumn.getDbColumnName() + " = ?  \" " ;
-			methodName = "get"+cgObject.getDomainExt().getName()+"By"+colName ;
+			methodName = "get"+cgObject.getDomainExt().getName();
+			if(!dbColumn.isPrimaryKeyColumn()) methodName = methodName +"By"+colName ;
+			
 		}else{
 		    sql = "\" SELECT * FROM " + tableName + " \" " ; 
 		    methodName = "get"+cgObject.getDomainExt().getName()+"s" ;

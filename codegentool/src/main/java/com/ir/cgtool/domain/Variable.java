@@ -1,6 +1,7 @@
 package com.ir.cgtool.domain;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import com.ir.cgtool.util.CodeGenUtil;
@@ -119,4 +120,18 @@ public class Variable {
 		return sb.toString();
 	}
 
+	public final static Comparator<Variable> VARIABLE_NAME_COMPARATOR = new Comparator<Variable>(){
+		@Override
+		public int compare(Variable o1, Variable o2) {
+			if (o1 == null && o2 == null) return 0;
+			if (o1 == null) return -1;
+			if (o2 == null) return 1;
+			
+			if (o1.getName() == null && o2.getName() == null) return 0;
+			if (o1.getName() == null) return -1;
+			if (o2.getName() == null) return 1;
+
+			return o1.getName().compareTo(o2.getName());
+		}
+	};
 }

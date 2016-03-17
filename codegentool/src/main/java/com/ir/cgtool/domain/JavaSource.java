@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import com.ir.cgtool.util.CodeGenUtil;
@@ -40,6 +41,12 @@ public class JavaSource {
 	
 	private List<String> annotations = new ArrayList<String>();
 	
+	private boolean sortImports = true; 
+	
+	private boolean sortMethods = false; 
+	
+	private boolean sortVariables = false; 
+	 
 	public JavaSource(String type, String name, String sourcePackage, String sourceFolder, boolean testClassRequired) {
 		super();
 		setType(type);
@@ -153,6 +160,30 @@ public class JavaSource {
 	public void setAnnotations(List<String> annotations) {
 		this.annotations = annotations;
 	}
+	
+	public boolean isSortImports() {
+		return sortImports;
+	}
+
+	public void setSortImports(boolean sortImports) {
+		this.sortImports = sortImports;
+	}
+
+	public boolean isSortMethods() {
+		return sortMethods;
+	}
+
+	public void setSortMethods(boolean sortMethods) {
+		this.sortMethods = sortMethods;
+	}
+
+	public boolean isSortVariables() {
+		return sortVariables;
+	}
+
+	public void setSortVariables(boolean sortVariables) {
+		this.sortVariables = sortVariables;
+	}
 
 	public void addAnnotation(String annotation, String annotationImport){
 		annotations.add(annotation);
@@ -229,10 +260,16 @@ public class JavaSource {
 	
 
 	public void generateCode() throws IOException {
+		
+		if(isSortImports()) Collections.sort(getImportList());
+
+		if(isSortMethods()) Collections.sort(getMethodList(), Method.METHOD_NAME_COMPARATOR);
+		
+		if(isSortVariables()) Collections.sort(getVariableList(), Variable.VARIABLE_NAME_COMPARATOR);
+		
 		generateSrcCode();
 
 		generateTestCode();
-
 	}
 
 	private void generateSrcCode() throws IOException {
@@ -436,5 +473,12 @@ public class JavaSource {
  	    
 	    getMethodList().add(constructor);
 	    
+	}
+
+
+	public void applySort(boolean b) {
+		 setSortImports(b);
+		 setSortMethods(b);
+		 setSortVariables(b);
 	}
 }
