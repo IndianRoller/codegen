@@ -515,18 +515,21 @@ public class CodeGenerator {
 		
 		
 		List<Variable> params = new ArrayList<Variable>();
+		List<Variable> restSvcParams = new ArrayList<Variable>();
 		String colName  = null ; 
 		String returnType     = cgObject.getDomainExt().getName();
 		String returnTypeName = cgObject.getDomainExt().getNameForVariable();
 		String returnTypeInit = "null" ; 
 		String sql = null ;
 		String methodName = null;
-		
-		String annotation = null; 
-		String annotationImp = null; 
-		 
+ 
 		if(dbColumn!=null) {
 			params.add(new Variable(dbColumn.getColumnName(), dbColumn.getColumnType(), "private"));
+			
+			Variable restParamVar = new Variable(dbColumn.getColumnName(), dbColumn.getColumnType(), "private");
+			restParamVar.addAnnotation("PathParam(\""+dbColumn.getColumnName()+"\")");
+			restSvcParams.add(restParamVar);
+			
 			colName = CodeGenUtil.toUpperCase(dbColumn.getColumnName(), 0);
 			sql = "\" SELECT * FROM " + tableName + " WHERE " +  dbColumn.getDbColumnName() + " = ?  \" " ;
 			methodName = "get"+cgObject.getDomainExt().getName()+"By"+colName ;
@@ -607,10 +610,17 @@ public class CodeGenerator {
 		 .append(dbColumn!=null ? dbColumn.getColumnName():"")
 		 .append(")").append(";");
 		 
-		 Method restMethod =  new Method("public",returnType, methodName , params  , methodBodyRestSvc.toString());
+		 Method restMethod =  new Method("public",returnType, methodName , restSvcParams  , methodBodyRestSvc.toString());
 		 restMethod.getThrownExceptions().add("Exception");
+		
+		restMethod.addAnnotation("GET");
+		if (dbColumn != null && dbColumn.isPrimaryKeyColumn()) {
+			restMethod.addAnnotation("Path(\"/{" + dbColumn.getColumnName() + "}\")");
+		} else if (dbColumn != null && (dbColumn.isRefKeyColumn() || dbColumn.isUniqueKeyColumn())) {
+			restMethod.addAnnotation("Path(\"/" + dbColumn.getColumnName()+"/{"+dbColumn.getColumnName()+"}" + "\")");
+		}
 		 
-		 restMethod.addAnnotation("GET");
+		 
 		 cgObject.getRestService().getMethodList().add(restMethod);
  	}
 
@@ -685,8 +695,7 @@ public class CodeGenerator {
 	}
 
 	public static void main(String[] args) throws Exception {
-		CodeGenerator cg = new CodeGenerator();
-		cg.execute();
+		new CodeGenerator().execute();
 		System.out.println("Successfully generated the source");
 	}
 

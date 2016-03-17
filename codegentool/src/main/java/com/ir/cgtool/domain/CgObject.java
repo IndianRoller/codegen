@@ -106,9 +106,9 @@ public class CgObject {
 		
 		setRestService(new JavaSource("class", javaClassName+"RestService" ,   getRestSvcPackage(), getSrcFolderForPackage(getRestSvcPackage()) , false));
 		getRestService().addAnnotation("Component", "org.springframework.stereotype.Component");
-		getRestService().addAnnotation("Path(\"/"+javaClassName+"s\")", "javax.ws.rs.Path");
-		getRestService().addAnnotation("Produces({\"application/json\"})", "javax.ws.rs.Produces");
-		getRestService().addAnnotation("Consumes({\"application/json\"})", "javax.ws.rs.Consumes");
+		getRestService().addAnnotation("Path(\"/"+CodeGenUtil.toLowerCase(javaClassName, 0)+"s\")", "javax.ws.rs.Path");
+		getRestService().addAnnotation("Produces({ \"application/json\" })", "javax.ws.rs.Produces");
+		getRestService().addAnnotation("Consumes({ \"application/json\" })", "javax.ws.rs.Consumes");
 
 		List<String> methodAnnoations = new ArrayList<String>();
 		methodAnnoations.add("org.springframework.beans.factory.annotation.Autowired");
@@ -146,6 +146,7 @@ public class CgObject {
 		
 		getRestService().getImportList().add("java.util.List");
 		getRestService().getImportList().add("javax.ws.rs.GET");
+		getRestService().getImportList().add("javax.ws.rs.PathParam");
 		getRestService().getImportList().add(getDomainExt().getFullName());
 	}
 

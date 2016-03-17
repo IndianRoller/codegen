@@ -112,6 +112,7 @@ public class Variable {
 
 	public String getParamCode(String mode) {
 		StringBuffer sb = new StringBuffer();
+		for(String annotation : annotations )sb.append("@").append(annotation).append(" ");
 		if (PARAM_MODE_DECL.equalsIgnoreCase(mode))
 			sb.append(getType()).append(" ");
 		sb.append(getName());
