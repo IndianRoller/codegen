@@ -8,12 +8,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.ir.cgtool.CGConstants;
 import com.ir.cgtool.util.CodeGenUtil;
 import com.ir.util.StringUtil;
 
 public class JavaSource {
-
-	public static final String END_OF_SRC = "}";
 
 	private String type = null;
 
@@ -47,13 +46,13 @@ public class JavaSource {
 	
 	private boolean sortVariables = false; 
 	 
-	public JavaSource(String type, String name, String sourcePackage, String sourceFolder, boolean testClassRequired) {
+	public JavaSource(String type, String name, String sourcePackage, String sourceFolder) {
 		super();
 		setType(type);
 		setName(name);
 		setSourcePackage(sourcePackage);
 		setSourceFolder(sourceFolder);
-		setTestClassRequired(testClassRequired);
+		setTestClassRequired(false);
 	}
 
 	
@@ -292,7 +291,7 @@ public class JavaSource {
 		content.append(getInstanceVariablesCode());
 		content.append(getMethodsCode());
 
-		content.append(END_OF_SRC);
+		content.append(CGConstants.END_OF_SRC);
 		output.write(content.toString());
 		output.close();
 	}
@@ -321,7 +320,7 @@ public class JavaSource {
 		//content.append(getInstanceVariablesTestCode());
         content.append(getMethodsTestCode());
 
-		content.append(END_OF_SRC);
+		content.append(CGConstants.END_OF_SRC);
 
 		BufferedWriter output = new BufferedWriter(new FileWriter(testFile));
 		output.write(content.toString());

@@ -1,58 +1,46 @@
 package com.ir.cgtool.domain;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
+import javax.xml.parsers.ParserConfigurationException;
+
 import org.w3c.dom.Document;
 
+import com.ir.cgtool.CGConstants;
+import com.ir.cgtool.util.CodeGenUtil;
 import com.ir.util.StringUtil;
 
 public class CodegenParameters {
- 
-	private String tableNames = null ;
-	 
-	private String srcFolder = null;
 
-	private String srcPackage = null;
-
-	private boolean createSpringService = false;
-	
-	private boolean createRestService = false;
-
-	private boolean createSpringDao = false;
-
-	private String modulePrefix = null;
-
-	private String packagePath = null;
-
-	private String basefolder = null;
-
+	private Map<String, Document> configFileMap = new HashMap<String, Document>();
+	private String baseFolder = null;
 	private String configFileDir = null;
-
-	private String daoImplPkg = null;
-	
-	private String daoBaseImplPkg = null;
-	
-	private String daoPkg = null;
-	
+	private String srcFolder = null;
+	private String srcPackage = null;
+	private String modulePrefix = null;
+	private boolean createSpringDao = false;
+	private boolean createSpringService = false;
+	private boolean createRestService = false;
+	private String domainBasePkg = null;
+	private String domainPkg = null;
+	private String domainHelperBasePkg = null;
+	private String domainHelperPkg = null;
 	private String daoBasePkg = null;
-
-	private String svcImplPkg = null;
-	
-	private String svcBaseImplPkg = null;
-	
-	private String svcPkg = null;
-	
+	private String daoBaseImplPkg = null;
+	private String daoPkg = null;
+	private String daoImplPkg = null;
 	private String svcBasePkg = null;
-	
-	private String restSvcPkg  = null ; 
-	
+	private String svcBaseImplPkg = null;
+	private String svcPkg = null;
+	private String svcImplPkg = null;
+	private String restSvcPkg = null;
 	private boolean overwriteAll = false;
-	
-	private Map<String,Document> configFileMap = null ; 
-	
-	
-	public CodegenParameters(Properties cgToolProperties) {
+	private String tableNames = null;
+	private String excludeTableNames = null;
+
+	public CodegenParameters(Properties cgToolProperties) throws ParserConfigurationException {
 		setTableNames(cgToolProperties.getProperty("tableNames"));
 		setSrcFolder(StringUtil.isEmpty(cgToolProperties.getProperty("srcFolder"))
 				? System.getProperty("user.dir") + "\\cgsrc" : cgToolProperties.getProperty("srcFolder"));
@@ -62,47 +50,71 @@ public class CodegenParameters {
 				new Boolean(StringUtil.nullCheck(cgToolProperties.getProperty("createSpringService"), "FALSE")));
 		setCreateRestService(
 				new Boolean(StringUtil.nullCheck(cgToolProperties.getProperty("createRestService"), "FALSE")));
-		
+
 		setCreateSpringDao(new Boolean(StringUtil.nullCheck(cgToolProperties.getProperty("createSpringDao"), "FALSE")));
 		setModulePrefix(cgToolProperties.getProperty("modulePrefix"));
-		setPackagePath(srcPackage.replace("\\", "."));
-		setBasefolder(cgToolProperties.getProperty("basefolder"));
+		// setPackagePath(srcPackage.replace("\\", "."));
+		setBaseFolder(cgToolProperties.getProperty("baseFolder"));
 		setConfigFileDir(cgToolProperties.getProperty("configFileDir"));
-		
-		setDaoImplPkg(StringUtil.isEmpty(cgToolProperties.getProperty("daoImplPkg")) ? ".dao.impl"
-				: cgToolProperties.getProperty("daoImplPkg"));
-		setDaoBaseImplPkg(StringUtil.isEmpty(cgToolProperties.getProperty("daoBaseImplPkg")) ? ".dao.cg.impl"
-				: cgToolProperties.getProperty("daoBaseImplPkg"));
-		setDaoPkg(StringUtil.isEmpty(cgToolProperties.getProperty("daoPkg")) ? ".dao"
-				: cgToolProperties.getProperty("daoPkg"));
-		setDaoBasePkg(StringUtil.isEmpty(cgToolProperties.getProperty("daoBasePkg")) ? ".dao.cg"
-				: cgToolProperties.getProperty("daoBasePkg"));
+
 		
 		
-		setSvcImplPkg(StringUtil.isEmpty(cgToolProperties.getProperty("svcImplPkg")) ? ".svc.impl"
-				: cgToolProperties.getProperty("svcImplPkg"));
-		setSvcBaseImplPkg(StringUtil.isEmpty(cgToolProperties.getProperty("svcBaseImplPkg")) ? ".svc.cg.impl"
-				: cgToolProperties.getProperty("svcBaseImplPkg"));
-		setSvcPkg(StringUtil.isEmpty(cgToolProperties.getProperty("svcPkg")) ? ".svc"
-				: cgToolProperties.getProperty("svcPkg"));
-		setSvcBasePkg(StringUtil.isEmpty(cgToolProperties.getProperty("svcBasePkg")) ? ".svc.cg"
-				: cgToolProperties.getProperty("svcBasePkg"));
+		setDomainBasePkg(getPackage(cgToolProperties, "domainBasePackage", ".domain.cg"));
+		setDomainPkg(getPackage(cgToolProperties, "domainPackage", ".domain"));
 		
-		setRestSvcPkg(StringUtil.isEmpty(cgToolProperties.getProperty("restSvcPkg")) ? ".web.svc"
-				: cgToolProperties.getProperty("restSvcPkg"));
+		setDomainHelperBasePkg(getPackage(cgToolProperties, "domainHelperBasePackage", ".domain.cg"));
+		setDomainHelperPkg(getPackage(cgToolProperties, "domainHelperBasePackage", ".domain"));
 		
-		
-		
-		setOverwriteAll(
-				new Boolean(StringUtil.nullCheck(cgToolProperties.getProperty("overwriteAll"), "FALSE")));
-	}
-	
-	public String getTableNames() {
-		return tableNames;
+		setDaoBasePkg(getPackage(cgToolProperties, "daoBasePkg", ".dao.cg"));
+		setDaoBaseImplPkg(getPackage(cgToolProperties, "daoBaseImplPkg", ".dao.cg.impl"));
+ 
+		setDaoPkg(getPackage(cgToolProperties, "daoPkg", ".dao"));
+		setDaoImplPkg(getPackage(cgToolProperties, "daoImplPkg", ".dao.impl"));
+
+		setSvcBasePkg(getPackage(cgToolProperties, "svcBasePkg", ".svc.cg"));
+		setSvcBaseImplPkg(getPackage(cgToolProperties, "svcBaseImplPkg", ".svc.cg.impl"));
+ 
+		setSvcPkg(getPackage(cgToolProperties, "svcPkg", ".svc"));
+		setSvcImplPkg(getPackage(cgToolProperties, "svcImplPkg", ".svc.impl"));
+  
+		setRestSvcPkg(getPackage(cgToolProperties, "restSvcPkg", ".web.svc"));
+		  
+
+		setOverwriteAll(new Boolean(StringUtil.nullCheck(cgToolProperties.getProperty("overwriteAll"), "FALSE")));
+
+		if (isCreateSpringService())
+			getConfigFileMap().put(CGConstants.SERVICE_CONFIG_XML, CodeGenUtil.getNewDocument());
+		if (isCreateSpringDao())
+			getConfigFileMap().put(CGConstants.DAO_CONFIG_XML, CodeGenUtil.getNewDocument());
 	}
 
-	public void setTableNames(String tableNames) {
-		this.tableNames = tableNames;
+	private String getPackage(Properties cgToolProperties, String propName, String defValue) {
+		return getSrcPackage().concat(StringUtil.isEmpty(cgToolProperties.getProperty(propName)) ? defValue
+		: cgToolProperties.getProperty(propName));
+	}
+
+	public Map<String, Document> getConfigFileMap() {
+		return configFileMap;
+	}
+
+	public void setConfigFileMap(Map<String, Document> configFileMap) {
+		this.configFileMap = configFileMap;
+	}
+
+	public String getBaseFolder() {
+		return baseFolder;
+	}
+
+	public void setBaseFolder(String baseFolder) {
+		this.baseFolder = baseFolder;
+	}
+
+	public String getConfigFileDir() {
+		return configFileDir;
+	}
+
+	public void setConfigFileDir(String configFileDir) {
+		this.configFileDir = configFileDir;
 	}
 
 	public String getSrcFolder() {
@@ -121,6 +133,22 @@ public class CodegenParameters {
 		this.srcPackage = srcPackage;
 	}
 
+	public String getModulePrefix() {
+		return modulePrefix;
+	}
+
+	public void setModulePrefix(String modulePrefix) {
+		this.modulePrefix = modulePrefix;
+	}
+
+	public boolean isCreateSpringDao() {
+		return createSpringDao;
+	}
+
+	public void setCreateSpringDao(boolean createSpringDao) {
+		this.createSpringDao = createSpringDao;
+	}
+
 	public boolean isCreateSpringService() {
 		return createSpringService;
 	}
@@ -137,52 +165,44 @@ public class CodegenParameters {
 		this.createRestService = createRestService;
 	}
 
-	public boolean isCreateSpringDao() {
-		return createSpringDao;
+	public String getDomainBasePkg() {
+		return domainBasePkg;
 	}
 
-	public void setCreateSpringDao(boolean createSpringDao) {
-		this.createSpringDao = createSpringDao;
+	public void setDomainBasePkg(String domainBasePkg) {
+		this.domainBasePkg = domainBasePkg;
 	}
 
-	public String getModulePrefix() {
-		return modulePrefix;
+	public String getDomainPkg() {
+		return domainPkg;
 	}
 
-	public void setModulePrefix(String modulePrefix) {
-		this.modulePrefix = modulePrefix;
-	}
- 	 
-	public String getPackagePath() {
-		return packagePath;
+	public void setDomainPkg(String domainPkg) {
+		this.domainPkg = domainPkg;
 	}
 
-	public void setPackagePath(String packagePath) {
-		this.packagePath = packagePath;
+	public String getDomainHelperBasePkg() {
+		return domainHelperBasePkg;
 	}
 
-	public String getBasefolder() {
-		return basefolder;
+	public void setDomainHelperBasePkg(String domainHelperBasePkg) {
+		this.domainHelperBasePkg = domainHelperBasePkg;
 	}
 
-	public void setBasefolder(String basefolder) {
-		this.basefolder = basefolder;
+	public String getDomainHelperPkg() {
+		return domainHelperPkg;
 	}
 
-	public String getConfigFileDir() {
-		return configFileDir;
+	public void setDomainHelperPkg(String domainHelperPkg) {
+		this.domainHelperPkg = domainHelperPkg;
 	}
 
-	public void setConfigFileDir(String configFileDir) {
-		this.configFileDir = configFileDir;
-	}
-	
-	public String getDaoImplPkg() {
-		return daoImplPkg;
+	public String getDaoBasePkg() {
+		return daoBasePkg;
 	}
 
-	public void setDaoImplPkg(String daoImplPkg) {
-		this.daoImplPkg = daoImplPkg;
+	public void setDaoBasePkg(String daoBasePkg) {
+		this.daoBasePkg = daoBasePkg;
 	}
 
 	public String getDaoBaseImplPkg() {
@@ -201,20 +221,20 @@ public class CodegenParameters {
 		this.daoPkg = daoPkg;
 	}
 
-	public String getDaoBasePkg() {
-		return daoBasePkg;
+	public String getDaoImplPkg() {
+		return daoImplPkg;
 	}
 
-	public void setDaoBasePkg(String daoBasePkg) {
-		this.daoBasePkg = daoBasePkg;
+	public void setDaoImplPkg(String daoImplPkg) {
+		this.daoImplPkg = daoImplPkg;
 	}
 
-	public String getSvcImplPkg() {
-		return svcImplPkg;
+	public String getSvcBasePkg() {
+		return svcBasePkg;
 	}
 
-	public void setSvcImplPkg(String svcImplPkg) {
-		this.svcImplPkg = svcImplPkg;
+	public void setSvcBasePkg(String svcBasePkg) {
+		this.svcBasePkg = svcBasePkg;
 	}
 
 	public String getSvcBaseImplPkg() {
@@ -233,14 +253,14 @@ public class CodegenParameters {
 		this.svcPkg = svcPkg;
 	}
 
-	public String getSvcBasePkg() {
-		return svcBasePkg;
+	public String getSvcImplPkg() {
+		return svcImplPkg;
 	}
 
-	public void setSvcBasePkg(String svcBasePkg) {
-		this.svcBasePkg = svcBasePkg;
+	public void setSvcImplPkg(String svcImplPkg) {
+		this.svcImplPkg = svcImplPkg;
 	}
-	
+
 	public String getRestSvcPkg() {
 		return restSvcPkg;
 	}
@@ -257,61 +277,36 @@ public class CodegenParameters {
 		this.overwriteAll = overwriteAll;
 	}
 
-	public Map<String, Document> getConfigFileMap() {
-		return configFileMap;
+	public String getTableNames() {
+		return tableNames;
 	}
 
-	public void setConfigFileMap(Map<String, Document> configFileMap) {
-		this.configFileMap = configFileMap;
+	public void setTableNames(String tableNames) {
+		this.tableNames = tableNames;
+	}
+
+	public String getExcludeTableNames() {
+		return excludeTableNames;
+	}
+
+	public void setExcludeTableNames(String excludeTableNames) {
+		this.excludeTableNames = excludeTableNames;
 	}
 
 	public String getConfigFileLocation() {
-		return  getBasefolder()+"\\"+ getConfigFileDir();
+		return getBaseFolder() + "\\" + getConfigFileDir();
 	}
-
-	public String getDaoImplPackage() {
-		return getFullPackagePath(getDaoImplPkg());
-	}
-
-	public String getDaoBaseImplPackage() {
-		return getFullPackagePath(getDaoBaseImplPkg());
-	}
-
-	public String getDaoPackage() {
-		return getFullPackagePath(getDaoPkg());
-	}
-
-	public String getDaoBasePackage() {
-		return getFullPackagePath(getDaoBasePkg());
-	}
-	
-	public String getSvcImplPackage() {
-		return getFullPackagePath(getSvcImplPkg());
-	}
-
-	public String getSvcBaseImplPackage() {
-		return getFullPackagePath(getSvcBaseImplPkg());
-	}
-
-	public String getSvcPackage() {
-		return getFullPackagePath(getSvcPkg());
-	}
-
-	public String getSvcBasePackage() {
-		return getFullPackagePath(getSvcBasePkg());
-	}
-	
-	public String getRestSvcPackage() {
-		return getFullPackagePath(getRestSvcPkg());
-	}
-
-	public String getFullPackagePath(String subPackage) {
- 		return getPackagePath().concat(subPackage); 
-	}
-	
+ 
 	public String getSrcFolderForPackage(String packageName) {
- 		return getSrcFolder().concat("\\").concat(packageName).replace(".", "\\");
+		return getBaseFolder().concat("\\").concat(getSrcFolder()).concat("\\").concat(packageName).replace(".", "\\");
 	}
-	
-	
+
+	public Document getDaoConfigFile() {
+		return getConfigFileMap().get(CGConstants.DAO_CONFIG_XML);
+	}
+
+	public Document getSvcConfigFile() {
+		return getConfigFileMap().get(CGConstants.SERVICE_CONFIG_XML);
+	}
+
 }
