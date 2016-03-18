@@ -455,7 +455,7 @@ public class CodeGenerator {
 			 
 			 method = new Method("public",cgObject.getDomainExt().getName(), methodName, restSvcParams  , methodBodyRestSvc.toString(),false);
 			 method.addAnnotation(methodAnnotation);
-			 if("update".equalsIgnoreCase(type)) method.addAnnotation("PathParam(\"/{"+cgObject.getPk().getColumnName()+"}\")");
+			 if("update".equalsIgnoreCase(type)) method.addAnnotation("Path(\"/{"+cgObject.getPk().getColumnName()+"}\")");
 			 method.getThrownExceptions().add("Exception");
 			 cgObject.getRestService().getMethodList().add(method);
 		 }
