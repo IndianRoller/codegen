@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.w3c.dom.Attr;
+
 import com.ir.cgtool.CGConstants;
 import com.ir.cgtool.util.CodeGenUtil;
 import com.ir.util.StringUtil;
@@ -84,6 +86,66 @@ public class CgObject {
 		setImports();
 	}
 
+	
+	
+
+	private void prepareDomain() {
+		createClass(CGConstants.DOMAIN, "Base", getCgParams().getDomainBasePkg());
+		createClass(CGConstants.DOMAIN_EXT, "", getCgParams().getDomainPkg());
+	    
+	    getDomainExt().addSupperClass(getDomain());
+	    getDomainExt().setOverwrite(false);
+ 	}
+
+	private void prepareDomainHelper() {
+		createClass(CGConstants.DOMAIN_HELPER,"HelperBase", getCgParams().getDomainHelperBasePkg());
+		createClass(CGConstants.DOMAIN_HELPER_EXT,"Helper", getCgParams().getDomainHelperPkg());
+	      
+		getDomainHelperExt().addSupperClass(getDomainHelper());
+		getDomainHelperExt().setOverwrite(false);
+ 		
+ 	}
+	
+	private void prepareDao() {
+	 	createInterface(CGConstants.DAO_BASE,"DaoBase", getCgParams().getDaoBasePkg());
+		createInterface(CGConstants.DAO_EXT,"Dao", getCgParams().getDaoPkg());
+	    getDaoExt().addSupperClass(getDaoBase());
+	    getDaoExt().setOverwrite(false);
+	    getDaoExt().setSpringBean(true);
+	     
+	    createClass(CGConstants.DAO_BASE_IMPL,"DaoBaseImpl", getCgParams().getDaoBaseImplPkg());
+		getDaoBaseImpl().addSupperClass("JdbcDao","com.ir.dao.JdbcDao");
+ 	    getDaoBaseImpl().addImplementation(getDaoBase());
+ 	    
+ 	    
+	    getDaoBaseImpl().addDependency(getDomainHelperExt(), null, true);
+	    
+	    List<JavaSource> dependenciesRef = new ArrayList<JavaSource>();
+ 	    dependenciesRef.add(getDomainHelperExt());
+ 	    
+ 	    
+ 	    getDaoBaseImpl().applySort(true);
+ 	    getDaoBaseImpl().setTestClassRequired(true);
+	     
+ 	    createClass(CGConstants.DAO_EXT_IMPL, "DaoImpl", getCgParams().getDaoImplPkg());
+ 	    getDaoImplExt().getImplmentionList().add(getDaoExt().getName());
+	    getDaoImplExt().addSupperClass(getDaoBaseImpl());
+ 
+ 	    getDaoImplExt().setOverwrite(false);
+ 	    List<Attr> optionalAttrs = new ArrayList<Attr>(1);
+ 	    if(getCgParams().isJdbcDaoSupport()){
+ 	    	optionalAttrs.add(CodeGenUtil.createAttr(getCgParams().getDaoConfigFile(), "parent", getCgParams().getModulePrefix().concat("-").concat("jdbcDao")));
+ 	    }
+ 	    
+ 	    
+		if (getCgParams().isCreateSpringDao()){
+			CodeGenUtil.addSpringBeans(getCgParams().getDaoConfigFile(), getDaoExt(), getDaoImplExt(), dependenciesRef ,getCgParams(),optionalAttrs);
+		}else{
+		    getDaoBaseImpl().addConstructor(dependenciesRef,null);
+		}
+ 		
+ 	}
+	
 	private void prepareService() {
 		createInterface(CGConstants.SERVICE_BASE,"ServiceBase", getCgParams().getSvcBasePkg());
 
@@ -91,18 +153,20 @@ public class CgObject {
   	    getServiceExt().addSupperClass(getServiceBase());
 	    getServiceExt().setOverwrite(false);
 	    
+	   
 	    
 	    createClass(CGConstants.SERVICE_BASE_IMPL,"ServiceBaseImpl", getCgParams().getSvcBaseImplPkg());
 	    getServiceBaseImpl().addSupperClass(getServiceBase());
  	    getServiceBaseImpl().addDependency(getDaoExt(), null, true);
  	    getServiceBaseImpl().applySort(true);
- 	   
+ 	    getServiceBaseImpl().setTestClassRequired(true);
 		 
 	    createClass(CGConstants.SERVICE_EXT_IMPL,"ServiceImpl", getCgParams().getSvcImplPkg());
 		getServiceImplExt().addSupperClass( getServiceBaseImpl());
 		getServiceImplExt().getImplmentionList().add(getServiceExt().getName());
 	
 		getServiceImplExt().setOverwrite(false);
+		//getServiceImplExt().setTestClassRequired(true);
 		
 		List<JavaSource> dependenciesRef = new ArrayList<JavaSource>();
 		List<JavaSource> dependenciesImpl = new ArrayList<JavaSource>();
@@ -111,7 +175,7 @@ public class CgObject {
 
 		if (getCgParams().isCreateSpringService()) {
 			CodeGenUtil.addSpringBeans(getCgParams().getSvcConfigFile(),
-					getServiceExt(), getServiceImplExt(), dependenciesRef,getCgParams());
+					getServiceExt(), getServiceImplExt(), dependenciesRef,getCgParams(),null);
 		} else {
 			getServiceBaseImpl().addConstructor(dependenciesRef, dependenciesImpl);
 		}
@@ -129,7 +193,7 @@ public class CgObject {
 		getRestService().applySort(true);
  	     
 	}
- 
+	
 	private void setImports() {
 		getDomainHelper().getImportList().add("java.sql.ResultSet");
   		getDomainHelper().getImportList().add("java.sql.PreparedStatement");
@@ -165,53 +229,7 @@ public class CgObject {
 		getRestService().getImportList().add("javax.ws.rs.DELETE");
  		getRestService().getImportList().add(getDomainExt().getFullName());
 	}
-
-	private void prepareDao() {
-	 	 createInterface(CGConstants.DAO_BASE,"DaoBase", getCgParams().getDaoBasePkg());
-		 createInterface(CGConstants.DAO_EXT,"Dao", getCgParams().getDaoPkg());
-	    getDaoExt().addSupperClass(getDaoBase());
-	    getDaoExt().setOverwrite(false);
-	     
-	    createClass(CGConstants.DAO_BASE_IMPL,"DaoBaseImpl", getCgParams().getDaoBaseImplPkg());
-		
- 	    getDaoBaseImpl().addSupperClass(getDaoBase());
-	    getDaoBaseImpl().addDependency(getDomainHelperExt(), null, true);
-	    
-	    List<JavaSource> dependenciesRef = new ArrayList<JavaSource>();
- 	    dependenciesRef.add(getDomainHelperExt());
- 	    getDaoBaseImpl().addConstructor(dependenciesRef,null);
- 	    getDaoBaseImpl().applySort(true);
-	     
- 	    createClass(CGConstants.DAO_EXT_IMPL, "DaoImpl", getCgParams().getDaoImplPkg());
- 	    getDaoImplExt().getImplmentionList().add(getDaoExt().getName());
-	    getDaoImplExt().addSupperClass(getDaoBaseImpl());
-
- 	    getDaoImplExt().setOverwrite(false);
- 	    
-		if (getCgParams().isCreateSpringDao()) {
-			CodeGenUtil.addSpringBeans(getCgParams().getDaoConfigFile(), getDaoExt(), getDaoImplExt(), new ArrayList<JavaSource>(),getCgParams());
-		}
- 		
- 	}
-
-	
  
-	private void prepareDomainHelper() {
-		createClass(CGConstants.DOMAIN_HELPER,"HelperBase", getCgParams().getDomainHelperBasePkg());
-		createClass(CGConstants.DOMAIN_HELPER_EXT,"Helper", getCgParams().getDomainHelperPkg());
-	      
-		getDomainHelperExt().addSupperClass(getDomainHelper());
-		getDomainHelperExt().setOverwrite(false);
-	}
-
-	private void prepareDomain() {
-		createClass(CGConstants.DOMAIN, "Base", getCgParams().getDomainBasePkg());
-		createClass(CGConstants.DOMAIN_EXT, "", getCgParams().getDomainPkg());
-	    
-	    getDomainExt().addSupperClass(getDomain());
-	    getDomainExt().setOverwrite(false);
- 	}
-
 	private void createClass(String componentName, String name, String packageName) {
 		getComponents().put(componentName, new JavaSource("class", getJavaClassName()+name, packageName, getCgParams().getSrcFolderForPackage(packageName)));
 	}
@@ -567,7 +585,7 @@ public class CgObject {
 							
 							
 						  
-							methodBodyDaoImpl.append("\t\t\t").append("connection = ConnectionUtil.getConnection();").append("\n")
+							methodBodyDaoImpl.append("\t\t\t").append(getConnectionInit()).append("\n")
 							.append("\t\t\t").append("pstmt=connection.prepareStatement(sql);").append("\n");
 						
 							if ("delete".equalsIgnoreCase(type)) {
@@ -594,7 +612,8 @@ public class CgObject {
 						  .append("\t  ").append("} catch(Exception ex) { ").append("\n\n")
 						  .append("\t\t  ").append("throw ex; ").append("\n\n")
 						  .append("\t  ").append("} finally {").append("\n")
-						  .append("\t\t  ").append("ConnectionUtil.closeConnection(connection,pstmt);").append("\n")
+						  .append("\t\t  ").append("ConnectionUtil.closeConnection(pstmt);").append("\n")
+						  .append("\t\t  ").append(getConnectionCleanup("connection")).append("\n")
 						  .append("\t  ").append("}").append("\n");
 		    if("add".equalsIgnoreCase(type))
 		    methodBodyDaoImpl.append("\t").append("\t").append("return ").append(returnTypeImpl).append(";");
@@ -707,9 +726,9 @@ public class CgObject {
 						  .append("\t\t").append("PreparedStatement pstmt = null ;").append("\n")
 						  .append("\t\t").append("ResultSet rs = null ;").append("\n")
 						  .append("\t\t").append(returnType).append(" ").append(returnTypeName).append(" = ").append(returnTypeInit).append(";").append("\n")
-						  .append("\t\t").append("try { ").append("\n")
-						  .append("\t\t\t").append("connection = ConnectionUtil.getConnection();").append("\n")
-						  .append("\t\t\t").append("pstmt=connection.prepareStatement(sql);").append("\n");
+						  .append("\t\t").append("try { ").append("\n");
+		methodBodyDaoImpl.append("\t\t\t").append(getConnectionInit()).append("\n");
+		methodBodyDaoImpl.append("\t\t\t").append("pstmt=connection.prepareStatement(sql);").append("\n");
 		if(null !=dbColumn) {
 			methodBodyDaoImpl.append("\t\t\t").append("pstmt.").append("set").append(dbColumn.getColumnType()).append("(1,").append(dbColumn.getColumnName()).append(");").append("\n");
 				
@@ -734,7 +753,8 @@ public class CgObject {
 						  .append("\t  ").append("} catch(Exception ex) { ").append("\n\n")
 						  .append("\t\t  ").append("throw ex; ").append("\n\n")
 						  .append("\t  ").append("} finally {").append("\n")
-						  .append("\t\t  ").append("ConnectionUtil.closeConnection(connection,rs,pstmt);").append("\n")
+						  .append("\t\t  ").append("ConnectionUtil.closeConnection(rs,pstmt);").append("\n")
+						  .append("\t\t  ").append(getConnectionCleanup("connection")).append("\n")
 						  .append("\t  ").append("}").append("\n");
 		 methodBodyDaoImpl.append("\t").append("\t").append("return ").append(returnTypeName).append(";");
 		 
@@ -770,6 +790,23 @@ public class CgObject {
 		 
 		 getRestService().getMethodList().add(restMethod);
  	}
+
+	private String getConnectionCleanup(String connVar) {
+		if(getCgParams().isJdbcDaoSupport()){
+			return "releaseConnection("+connVar+");";
+		}else {
+			return "ConnectionUtil.closeConnection("+connVar+");";
+		}
+		
+	}
+
+	private String getConnectionInit() {
+		if(getCgParams().isJdbcDaoSupport()){
+			return "connection = getConnection();";
+		}else {
+			return "connection = ConnectionUtil.getConnection();";
+		}
+	}
  
 
 }

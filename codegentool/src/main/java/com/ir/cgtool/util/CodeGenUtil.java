@@ -109,34 +109,53 @@ public class CodeGenUtil {
      
 	}
 
-	public static void addSpringBeans(Document document, JavaSource base, JavaSource impl, List<JavaSource> dependenciesRef,CodegenParameters cgParams) {
-		Attr idAttr = document.createAttribute("id");
-		idAttr.setValue(cgParams.getModulePrefix() + "-" + base.getNameForVariable());
-
-		Attr classAttr = document.createAttribute("class");
-		classAttr.setValue(impl.getSourcePackage() + "." + impl.getName());
+	public static void addSpringBeans(Document document, JavaSource base, JavaSource impl, List<JavaSource> dependenciesRef,CodegenParameters cgParams, List<Attr> optionalAttr) {
+		Attr idAttr = createAttr(document, "id",base.getSpringBeanName(cgParams.getModulePrefix()));
+		Attr classAttr = createAttr(document, "class",impl.getFullName());
 
 		Element newBean = document.createElement("bean");
 		newBean.setAttributeNode(idAttr);
 		newBean.setAttributeNode(classAttr);
+		
+		if(optionalAttr!=null && !optionalAttr.isEmpty()) {
+			for(Attr attr : optionalAttr)newBean.setAttributeNode(attr);
+		}
 
 		document.getDocumentElement().appendChild(newBean);
 
 		for (JavaSource bean : dependenciesRef) {
-
+			Element prop = document.createElement("property");
 			Attr nameAttr = document.createAttribute("name");
 			nameAttr.setValue(bean.getNameForVariable());
-
-			Attr refAttr = document.createAttribute("ref");
-			refAttr.setValue(cgParams.getModulePrefix() + "-" + bean.getNameForVariable());
-
-			Element prop = document.createElement("property");
 			prop.setAttributeNode(nameAttr);
-			prop.setAttributeNode(refAttr);
-
+			 
+			if(bean.isSpringBean()){
+				Attr refAttr  = document.createAttribute("ref");
+				refAttr.setValue(bean.getSpringBeanName(cgParams.getModulePrefix()));
+				prop.setAttributeNode(refAttr);
+			}else {
+				Element innerBean = document.createElement("bean");
+				
+				
+				Attr iidAttr =  createAttr(document, "id",bean.getSpringBeanName(cgParams.getModulePrefix()));  
+ 				Attr iclassAttr =createAttr(document, "class",bean.getFullName()); 
+				
+				innerBean.setAttributeNode(iidAttr);
+				innerBean.setAttributeNode(iclassAttr);
+			    prop.appendChild(innerBean);
+				
+			}
 			newBean.appendChild(prop);
 		}
 	}
+
+	public static Attr createAttr(Document document, String name, String value) {
+		Attr classAttr = document.createAttribute( name);
+		classAttr.setValue(value);
+		return classAttr;
+	}
+	
+	 
 
 	public static Document getNewDocument() throws ParserConfigurationException {
 		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();

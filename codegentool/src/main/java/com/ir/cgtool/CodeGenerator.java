@@ -1,6 +1,7 @@
 package com.ir.cgtool;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -14,8 +15,12 @@ import com.ir.util.StringUtil;
 public class CodeGenerator {
  
 	public static void main(String[] args) throws Exception {
+		long start = System.currentTimeMillis();
+		System.out.println("Starting code generation on: "+new Date(start));
 		new CodeGenerator().execute();
-		System.out.println("Successfully generated the source");
+		long end = System.currentTimeMillis();
+		
+		System.out.println("Code generation completd on: "+new Date(end)+",Total Time in Secs : "+(end-start)/1000);
 	}
 
 	

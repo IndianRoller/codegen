@@ -45,6 +45,8 @@ public class JavaSource {
 	private boolean sortMethods = false; 
 	
 	private boolean sortVariables = false; 
+	
+	private boolean isSpringBean = false; 
 	 
 	public JavaSource(String type, String name, String sourcePackage, String sourceFolder) {
 		super();
@@ -183,12 +185,19 @@ public class JavaSource {
 	public void setSortVariables(boolean sortVariables) {
 		this.sortVariables = sortVariables;
 	}
+	
+	public boolean isSpringBean() {
+		return isSpringBean;
+	}
+
+	public void setSpringBean(boolean isSpringBean) {
+		this.isSpringBean = isSpringBean;
+	}
 
 	public void addAnnotation(String annotation, String annotationImport){
 		annotations.add(annotation);
 		getImportList().add(annotationImport);
  	}
-
 	
 	public String getFullName() {
 		return getSourcePackage().concat(".").concat(getName());
@@ -196,6 +205,10 @@ public class JavaSource {
 
 	public String getNameForVariable() {
 		return CodeGenUtil.toLowerCase(getName(), 0);
+	}
+
+	public String getSpringBeanName(String pefix) {
+		return  pefix + "-" +  CodeGenUtil.toLowerCase(getName(), 0);
 	}
 
 	public String getPackageStatementCode() {
@@ -419,6 +432,17 @@ public class JavaSource {
 		}
 		 
 		setSuperClassName(superClass.getName());
+		getImportList().add(superClass.getFullName());
+	}
+	
+	public void addSupperClass(String className, String fullPath) {
+	    setSuperClassAssociationType("extends" );
+	 	setSuperClassName(className);
+		getImportList().add(fullPath);
+	}
+	
+	public void addImplementation(JavaSource superClass) {
+ 	 	getImplmentionList().add(superClass.getName());
 		getImportList().add(superClass.getFullName());
 	}
 

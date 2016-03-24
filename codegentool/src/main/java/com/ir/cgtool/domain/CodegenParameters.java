@@ -23,6 +23,7 @@ public class CodegenParameters {
 	private boolean createSpringDao = false;
 	private boolean createSpringService = false;
 	private boolean createRestService = false;
+	private boolean jdbcDaoSupport = false;
 	private String domainBasePkg = null;
 	private String domainPkg = null;
 	private String domainHelperBasePkg = null;
@@ -50,8 +51,12 @@ public class CodegenParameters {
 				new Boolean(StringUtil.nullCheck(cgToolProperties.getProperty("createSpringService"), "FALSE")));
 		setCreateRestService(
 				new Boolean(StringUtil.nullCheck(cgToolProperties.getProperty("createRestService"), "FALSE")));
-
-		setCreateSpringDao(new Boolean(StringUtil.nullCheck(cgToolProperties.getProperty("createSpringDao"), "FALSE")));
+		
+		setJdbcDaoSupport(
+				new Boolean(StringUtil.nullCheck(cgToolProperties.getProperty("jdbcDaoSupport"), "FALSE")));
+		
+		setCreateSpringDao(new Boolean(StringUtil.nullCheck(cgToolProperties.getProperty("jdbcDaoSupport"), "FALSE")));
+		
 		setModulePrefix(cgToolProperties.getProperty("modulePrefix"));
 		// setPackagePath(srcPackage.replace("\\", "."));
 		setBaseFolder(cgToolProperties.getProperty("baseFolder"));
@@ -163,6 +168,14 @@ public class CodegenParameters {
 
 	public void setCreateRestService(boolean createRestService) {
 		this.createRestService = createRestService;
+	}
+
+	public boolean isJdbcDaoSupport() {
+		return jdbcDaoSupport;
+	}
+
+	public void setJdbcDaoSupport(boolean jdbcDaoSupport) {
+		this.jdbcDaoSupport = jdbcDaoSupport;
 	}
 
 	public String getDomainBasePkg() {
