@@ -24,6 +24,7 @@ public class CodegenParameters {
 	private boolean createSpringService = false;
 	private boolean createRestService = false;
 	private boolean jdbcDaoSupport = false;
+	private boolean springJdbcTemplate = false;
 	private String domainBasePkg = null;
 	private String domainPkg = null;
 	private String domainHelperBasePkg = null;
@@ -55,20 +56,22 @@ public class CodegenParameters {
 		setJdbcDaoSupport(
 				new Boolean(StringUtil.nullCheck(cgToolProperties.getProperty("jdbcDaoSupport"), "FALSE")));
 		
+		setSpringJdbcTemplate(
+				new Boolean(StringUtil.nullCheck(cgToolProperties.getProperty("springJdbcTemplate"), "FALSE")));
+		
+		
 		setCreateSpringDao(new Boolean(StringUtil.nullCheck(cgToolProperties.getProperty("jdbcDaoSupport"), "FALSE")));
 		
 		setModulePrefix(cgToolProperties.getProperty("modulePrefix"));
-		// setPackagePath(srcPackage.replace("\\", "."));
+
 		setBaseFolder(cgToolProperties.getProperty("baseFolder"));
 		setConfigFileDir(cgToolProperties.getProperty("configFileDir"));
-
-		
-		
+ 		
 		setDomainBasePkg(getPackage(cgToolProperties, "domainBasePackage", ".domain.cg"));
 		setDomainPkg(getPackage(cgToolProperties, "domainPackage", ".domain"));
 		
 		setDomainHelperBasePkg(getPackage(cgToolProperties, "domainHelperBasePackage", ".domain.cg"));
-		setDomainHelperPkg(getPackage(cgToolProperties, "domainHelperBasePackage", ".domain"));
+		setDomainHelperPkg(getPackage(cgToolProperties, "domainHelperPackage", ".domain"));
 		
 		setDaoBasePkg(getPackage(cgToolProperties, "daoBasePkg", ".dao.cg"));
 		setDaoBaseImplPkg(getPackage(cgToolProperties, "daoBaseImplPkg", ".dao.cg.impl"));
@@ -83,8 +86,7 @@ public class CodegenParameters {
 		setSvcImplPkg(getPackage(cgToolProperties, "svcImplPkg", ".svc.impl"));
   
 		setRestSvcPkg(getPackage(cgToolProperties, "restSvcPkg", ".web.svc"));
-		  
-
+ 
 		setOverwriteAll(new Boolean(StringUtil.nullCheck(cgToolProperties.getProperty("overwriteAll"), "FALSE")));
 
 		if (isCreateSpringService())
@@ -176,6 +178,14 @@ public class CodegenParameters {
 
 	public void setJdbcDaoSupport(boolean jdbcDaoSupport) {
 		this.jdbcDaoSupport = jdbcDaoSupport;
+	}
+
+	public boolean isSpringJdbcTemplate() {
+		return springJdbcTemplate;
+	}
+
+	public void setSpringJdbcTemplate(boolean springJdbcTemplate) {
+		this.springJdbcTemplate = springJdbcTemplate;
 	}
 
 	public String getDomainBasePkg() {

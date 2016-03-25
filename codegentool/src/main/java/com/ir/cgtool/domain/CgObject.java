@@ -90,7 +90,7 @@ public class CgObject {
 	
 
 	private void prepareDomain() {
-		createClass(CGConstants.DOMAIN, "Base", getCgParams().getDomainBasePkg());
+		createClass(CGConstants.DOMAIN_BASE, "Base", getCgParams().getDomainBasePkg());
 		createClass(CGConstants.DOMAIN_EXT, "", getCgParams().getDomainPkg());
 	    
 	    getDomainExt().addSupperClass(getDomain());
@@ -98,7 +98,12 @@ public class CgObject {
  	}
 
 	private void prepareDomainHelper() {
-		createClass(CGConstants.DOMAIN_HELPER,"HelperBase", getCgParams().getDomainHelperBasePkg());
+		createClass(CGConstants.DOMAIN_HELPER_BASE,"HelperBase", getCgParams().getDomainHelperBasePkg());
+		
+		if(cgParams.isSpringJdbcTemplate()){
+			getDomainHelper().addImplementation("RowMapper<"+javaClassName+">","org.springframework.jdbc.core.RowMapper");
+		}
+
 		createClass(CGConstants.DOMAIN_HELPER_EXT,"Helper", getCgParams().getDomainHelperPkg());
 	      
 		getDomainHelperExt().addSupperClass(getDomainHelper());
@@ -196,18 +201,24 @@ public class CgObject {
 	
 	private void setImports() {
 		getDomainHelper().getImportList().add("java.sql.ResultSet");
-  		getDomainHelper().getImportList().add("java.sql.PreparedStatement");
-  		getDomainHelper().getImportList().add("java.sql.Types");
-			
+		if (!cgParams.isSpringJdbcTemplate()) {
+			getDomainHelper().getImportList().add("java.sql.PreparedStatement");
+			getDomainHelper().getImportList().add("java.sql.Types");
+		}
+		
 		getDaoBase().getImportList().add("java.util.List");
 		getDaoBase().getImportList().add(getDomainExt().getFullName()); 
 	   
-		getDaoBaseImpl().getImportList().add("java.sql.Connection");
-  		getDaoBaseImpl().getImportList().add("java.sql.ResultSet");
-  		getDaoBaseImpl().getImportList().add("java.sql.PreparedStatement");
+		if(!cgParams.isSpringJdbcTemplate()){
+			getDaoBaseImpl().getImportList().add("java.sql.Connection");
+	  		getDaoBaseImpl().getImportList().add("java.sql.ResultSet");
+	  		getDaoBaseImpl().getImportList().add("java.sql.PreparedStatement");
+			getDaoBaseImpl().getImportList().add("java.util.ArrayList");
+			
+			if(!cgParams.isJdbcDaoSupport())
+			 getDaoBaseImpl().getImportList().add("com.ir.util.ConnectionUtil");
+		}
 		getDaoBaseImpl().getImportList().add("java.util.List");
-		getDaoBaseImpl().getImportList().add("java.util.ArrayList");
-		getDaoBaseImpl().getImportList().add("com.ir.util.ConnectionUtil");
 		getDaoBaseImpl().getImportList().add("com.ir.util.DBUtil");
 		getDaoBaseImpl().getImportList().add(getDomainExt().getFullName());
  		
@@ -239,11 +250,11 @@ public class CgObject {
 	}
 	
 	public JavaSource getDomain() {
-		return getComponents().get(CGConstants.DOMAIN);
+		return getComponents().get(CGConstants.DOMAIN_BASE);
 	}
  
 	public JavaSource getDomainHelper() {
-		return getComponents().get(CGConstants.DOMAIN_HELPER); 
+		return getComponents().get(CGConstants.DOMAIN_HELPER_BASE); 
 	}
  
 	public JavaSource getServiceBase() {
@@ -291,7 +302,9 @@ public class CgObject {
 	}
  
 	public void generateCode() throws IOException {
+		System.out.println("Generating code for "+ getTableName());
 		for (Entry<String, JavaSource> entry : getComponents().entrySet()) {
+			System.out.println("Generating : "+ entry.getValue().getFullName());
 			entry.getValue().generateCode();
 		}
 	}
@@ -349,29 +362,40 @@ public class CgObject {
 		
 		StringBuffer sqlInsert = new StringBuffer("\" INSERT INTO ").append(getTableName()).append(" (");
 		StringBuffer sqlUpdate = new StringBuffer("\" UPDATE ").append(getTableName()).append(" SET ");
-		StringBuffer sqlDelete = new StringBuffer("\" DELETE FROM  ").append(getTableName());
-		
+		StringBuffer sqlDelete = new StringBuffer("\" DELETE FROM ").append(getTableName());
+		StringBuffer jdbcTemplateParams = new StringBuffer("\t\treturn new Object[] { ");
 		for(DBColumn dbCol : dbCols){
+			if(columnCnt > 0) jdbcTemplateParams.append(", ");
+			
 			String colName = CodeGenUtil.toUpperCase(dbCol.getColumnName(), 0);
 			if("boolean".equals(dbCol.getColumnType())){
-				dhMapFromDB.append("\t\t").append(getDomainExt().getNameForVariable()).append(".set"+colName+"(").append("\"Y\".equals(rs.getString(\"").append(dbCol.getDbColumnName()).append("\")));").append("\n\n");
-				dhMapToDB.append("\t\t").append("psmt.setString(").append(columnCnt+1).append(",").append(getDomainExt().getNameForVariable()).append(".is").append(colName).append("()?\"Y\":\"N\"").append(");").append("\n\n");
+				dhMapFromDB.append("\t\t").append(getDomainExt().getNameForVariable()).append(".set"+colName+"(").append("\"Y\".equals(rs.getString(\"").append(dbCol.getDbColumnName()).append("\")));").append(StringUtil.LINE_SEPARTOR);
+				dhMapToDB.append("\t\t").append("psmt.setString(").append(columnCnt+1).append(",").append(getDomainExt().getNameForVariable()).append(".is").append(colName).append("()?\"Y\":\"N\"").append(");").append(StringUtil.LINE_SEPARTOR);
+				
+				jdbcTemplateParams.append(getDomainExt().getNameForVariable()).append(".is").append(colName).append("()");
 			}else{
-				dhMapFromDB.append("\t\t").append(getDomainExt().getNameForVariable()).append(".set"+colName+"(").append("rs.get").append(dbCol.getColumnType()).append("(\"").append(dbCol.getDbColumnName()).append("\"));").append("\n\n");
+				dhMapFromDB.append("\t\t").append(getDomainExt().getNameForVariable()).append(".set"+colName+"(").append("rs.get").append(dbCol.getColumnType()).append("(\"").append(dbCol.getDbColumnName()).append("\"));").append(StringUtil.LINE_SEPARTOR);
 				dhMapToDB.append("\t\t").append("if( null == ").append(getDomainExt().getNameForVariable()).append(".get").append(colName).append("()){ ").append("\n");
 				dhMapToDB.append("\t\t\t").append("psmt.setNull(").append(columnCnt+1).append(",").append(dbCol.getNullType()).append("); \n");
 				dhMapToDB.append("\t\t").append("} else { ").append("\n");
-				dhMapToDB.append("\t\t\t").append("psmt.set").append(dbCol.getColumnType()).append("(").append(columnCnt+1).append(",").append(getDomainExt().getNameForVariable()).append(".get").append(colName).append("());").append("\n");
-				dhMapToDB.append("\t\t").append("}").append("\n\n");
+				dhMapToDB.append("\t\t\t").append("psmt.set").append(dbCol.getColumnType()).append("(").append(columnCnt+1).append(",").append(getDomainExt().getNameForVariable()).append(".get").append(colName).append("());").append(StringUtil.LINE_SEPARTOR);
+				dhMapToDB.append("\t\t").append("}").append(StringUtil.LINE_SEPARTOR);
+				
+				jdbcTemplateParams.append(getDomainExt().getNameForVariable()).append(".get").append(colName).append("()");
 			}
+			
+			
 			
 	    if(columnCnt>0) {
 			 sqlInsert.append(" ,");
-			 if(!dbCol.isPrimaryKeyColumn()) sqlUpdate.append(" , ");
+			 if(!dbCol.isPrimaryKeyColumn()) {
+				 sqlUpdate.append(" , ");
+			 }
 		 }
 	    
 	    
 		 sqlInsert.append(dbCol.getDbColumnName());
+		 
 		 
 		 if(!dbCol.isPrimaryKeyColumn()) sqlUpdate.append(dbCol.getDbColumnName()).append(" = ? ");
 		 
@@ -379,6 +403,7 @@ public class CgObject {
 			
 		}
 		
+		jdbcTemplateParams.append(" };");
 		
 		sqlInsert.append(" ) VALUES ( "); 
 		for(int i=0; i<columnCnt;i++){
@@ -416,8 +441,12 @@ public class CgObject {
 		
 		domainHelperMaptoDomain(  dhMapFromDB);
 		
-		domainHelperMapToDB(  dhMapToDB);
-
+		if(cgParams.isSpringJdbcTemplate()){
+			createDomainParamObject(jdbcTemplateParams);
+		}else{
+			domainHelperMapToDB(  dhMapToDB);
+		}
+		
 		saveMethod( false, "add");
 
 		//saveMethod(true , "add");
@@ -425,7 +454,22 @@ public class CgObject {
 		saveMethod( false , "update");
 	}
 
-
+	private void createDomainParamObject(StringBuffer dhMapToDB) {
+		List<Variable> dhparams = new ArrayList<Variable>();
+		//dhparams.add(new Variable("psmt", "PreparedStatement", "private"));
+		dhparams.add(new Variable(getDomainExt().getNameForVariable(), getDomainExt().getName(), "private"));
+		
+		StringBuffer dhMethodBody = new StringBuffer();
+		//dhMethodBody.append("\t\t").append(getDomain().getName()).append(" ").append(getDomain().getNameForVariable()).append(" = new ").append(getDomain().getName()).append("();\n\n");
+		dhMethodBody.append(dhMapToDB);
+		//dhMethodBody.append("\t\t").append("return ").append(getDomain().getNameForVariable()).append(";").append("\n");
+		Method dhMethod = new Method("public" , "Object[]" , "getObjectAsArray",dhparams, dhMethodBody.toString());
+		
+		//dhMethod.getThrownExceptions().add("SQLException");
+		//getDomainHelper().getImportList().add("java.sql.SQLException");
+		getDomainHelper().getMethodList().add(dhMethod);
+		
+	}
 	
 
 
@@ -449,11 +493,13 @@ public class CgObject {
 	private void domainHelperMaptoDomain(StringBuffer dhLoadFromDB) {
 		List<Variable> dhparams = new ArrayList<Variable>();
 		dhparams.add(new Variable("rs", "ResultSet", "private"));
+		dhparams.add(new Variable("rowNumber", "int", "private"));
 		StringBuffer dhMethodBody = new StringBuffer();
-		dhMethodBody.append("\t\t").append(getDomainExt().getName()).append(" ").append(getDomainExt().getNameForVariable()).append(" = new ").append(getDomainExt().getName()).append("();\n\n");
+		dhMethodBody.append("\t\t").append(getDomainExt().getName()).append(" ").append(getDomainExt().getNameForVariable()).append(" = new ").append(getDomainExt().getName()).append("();").append(StringUtil.LINE_SEPARTOR);
 		dhMethodBody.append(dhLoadFromDB);
-		dhMethodBody.append("\t\t").append("return ").append(getDomainExt().getNameForVariable()).append(";").append("\n");
-		Method dhMethod = new Method("public" , getDomainExt().getName(), "get"+getDomainExt().getName(),dhparams, dhMethodBody.toString());
+		dhMethodBody.append("\t\t").append("return ").append(getDomainExt().getNameForVariable()).append(";");
+		//Method dhMethod = new Method("public" , getDomainExt().getName(), "get"+getDomainExt().getName(),dhparams, dhMethodBody.toString());
+		Method dhMethod = new Method("public" , getDomainExt().getName(), "mapRow" ,dhparams, dhMethodBody.toString());
 		dhMethod.getThrownExceptions().add("SQLException");
 		getDomainHelper().getImportList().add("java.sql.SQLException");
 		getDomainHelper().getImportList().add(getDomainExt().getFullName());
@@ -510,6 +556,7 @@ public class CgObject {
 		}
 		 
 		 StringBuffer methodBodyDaoImpl = getDaoImplMethodBody(returnTypeImpl,type,null);
+		 
 		 StringBuffer methodBodyServiceImpl  = new StringBuffer();
 		 methodBodyServiceImpl.append("\t").append("\t");
 		 if(!"update".equalsIgnoreCase(type))    methodBodyServiceImpl.append("return ");
@@ -567,113 +614,114 @@ public class CgObject {
 		StringBuffer methodBodyDaoImpl;
 		methodBodyDaoImpl = new StringBuffer();
 		 
-		String sql = "add".equalsIgnoreCase(type)?".INSERT_":"delete".equalsIgnoreCase(type)?".DELETE_":".UPDATE_" ; 
+		 String sql = getDomainHelperExt().getName().concat("add".equalsIgnoreCase(type)?".INSERT_":"delete".equalsIgnoreCase(type)?".DELETE_":".UPDATE_").
+				 concat(getDomainExt().getName().toUpperCase()).concat("_SQL");
+		 String idGenerator =  null;
+		 String returnType =  null;
+		 String jdbcTemplateParams = "";
 		 
-		 methodBodyDaoImpl.append("\t\t").append("String sql = ").append(getDomainHelperExt().getName()).append(sql).append(getDomainExt().getName().toUpperCase()).append("_SQL").append(";\n")
-						  .append("\t\t").append("Connection connection = null ; ").append("\n")
-						  .append("\t\t").append("PreparedStatement pstmt = null ;").append("\n")
-						  .append("\t\t").append("try { ").append("\n");
-						  
-							if ("add".equalsIgnoreCase(type)) {
-								methodBodyDaoImpl.append("\t\t\t")
-										.append(getDomainExt().getNameForVariable())
-										.append(".").append(getPk().setMethodName())
-										.append("(DBUtil.getId(")
-										.append(getDomainHelperExt().getName())
-										.append(".SEQ_KEY));").append("\n");
-							}
-							
-							
-						  
-							methodBodyDaoImpl.append("\t\t\t").append(getConnectionInit()).append("\n")
-							.append("\t\t\t").append("pstmt=connection.prepareStatement(sql);").append("\n");
-						
-							if ("delete".equalsIgnoreCase(type)) {
-								methodBodyDaoImpl.append("\t\t\t").append("pstmt.set")
-										.append(dbColumn.getColumnType()).append("(1,")
-										.append(dbColumn.getColumnName()).append(");")
-										.append("\n");
-							} else {
-								methodBodyDaoImpl.append("\t\t\t")
-										.append(getDomainHelperExt().getNameForVariable())
-										.append(".set").append(getDomainExt().getName())
-										.append("(pstmt,")
-										.append(getDomainExt().getNameForVariable())
-										.append(");").append("\n");
-					
-							}
-							  
-		 methodBodyDaoImpl.append("\t\t\t").append("pstmt.executeUpdate();").append("\n");
+		 if ("add".equalsIgnoreCase(type)){
+			 idGenerator = new StringBuffer(getDomainExt().getNameForVariable()).append(".")
+					.append(getPk().setMethodName()).append("(DBUtil.getId(").append(getDomainHelperExt().getName())
+					.append(".SEQ_KEY));").append(StringUtil.LINE_SEPARTOR).toString();
+			 returnType = new StringBuffer().append("return ").append(returnTypeImpl).append(";").toString();
+			 
+			 jdbcTemplateParams = getDomainHelperExt().getNameForVariable().concat(".getObjectAsArray(").concat(getDomainExt().getNameForVariable()).concat(")"); 
+	     }else if("delete".equalsIgnoreCase(type)){
+	    	 jdbcTemplateParams = " new Object[] { ".concat( dbColumn.getColumnName()).concat(" }") ; 
+	     }else if("update".equalsIgnoreCase(type)){
+	    	 jdbcTemplateParams = getDomainHelperExt().getNameForVariable().concat(".getObjectAsArray(").concat(getDomainExt().getNameForVariable()).concat(")"); 
+	     }
 		 
-		 						  
-						  
-		    methodBodyDaoImpl.append("\t\t\t").append(" ").append("\n")
-						  .append("\t\t\t").append(" ").append("\n")
-						  .append("\t  ").append("} catch(Exception ex) { ").append("\n\n")
-						  .append("\t\t  ").append("throw ex; ").append("\n\n")
-						  .append("\t  ").append("} finally {").append("\n")
-						  .append("\t\t  ").append("ConnectionUtil.closeConnection(pstmt);").append("\n")
-						  .append("\t\t  ").append(getConnectionCleanup("connection")).append("\n")
-						  .append("\t  ").append("}").append("\n");
-		    if("add".equalsIgnoreCase(type))
-		    methodBodyDaoImpl.append("\t").append("\t").append("return ").append(returnTypeImpl).append(";");
+		 if(cgParams.isSpringJdbcTemplate()){
+			 if (idGenerator!=null) methodBodyDaoImpl.append("\t\t").append(idGenerator);
+			 methodBodyDaoImpl.append("\t\t").append("getJdbcTemplate().update(").append(sql ).append(", ").append(jdbcTemplateParams).append(");");
+			 if(returnType!=null) methodBodyDaoImpl.append(StringUtil.LINE_SEPARTOR).append("\t\t").append(returnType);
+ 		} else {
+			methodBodyDaoImpl.append("\t\t").append("Connection connection = null ; ").append("\n").append("\t\t")
+					.append("PreparedStatement pstmt = null ;").append("\n").append("\t\t").append("try { ")
+					.append("\n");
+
+			if (idGenerator!=null) methodBodyDaoImpl.append("\t\t\t").append(idGenerator);
+			methodBodyDaoImpl.append("\t\t\t").append(getConnectionInit()).append("\n").append("\t\t\t")
+					.append("pstmt=connection.prepareStatement(").append(sql).append(");").append("\n");
+
+			if ("delete".equalsIgnoreCase(type)) {
+				methodBodyDaoImpl.append("\t\t\t").append("pstmt.set").append(dbColumn.getColumnType()).append("(1,")
+						.append(dbColumn.getColumnName()).append(");").append("\n");
+			} else {
+				methodBodyDaoImpl.append("\t\t\t").append(getDomainHelperExt().getNameForVariable()).append(".set")
+						.append(getDomainExt().getName()).append("(pstmt,").append(getDomainExt().getNameForVariable())
+						.append(");").append("\n");
+
+			}
+
+			methodBodyDaoImpl.append("\t\t\t").append("pstmt.executeUpdate();").append("\n");
+			methodBodyDaoImpl.append("\t\t\t").append(" ").append("\n").append("\t\t\t").append(" ").append("\n")
+						.append("\t  ").append("} catch(Exception ex) { ").append("\n\n").append("\t\t  ")
+						.append("throw ex; ").append("\n\n").append("\t  ").append("} finally {").append("\n")
+						.append("\t\t  ").append("ConnectionUtil.closeConnection(pstmt);").append("\n").append("\t\t  ")
+						.append(getConnectionCleanup("connection")).append("\n").append("\t  }\n");
+			 if(returnType!=null) methodBodyDaoImpl.append("\t\t").append(returnType);
+		}
 		return methodBodyDaoImpl;
 	}
 
 
-	private void deleteMethod(DBColumn dbColumn){
+	private void deleteMethod(DBColumn dbColumn) {
 		Variable variable = new Variable(dbColumn.getColumnName(), dbColumn.getColumnType(), "private");
 		List<Variable> params = new ArrayList<Variable>();
 		params.add(variable);
-		
-		
+
 		Variable restParamVar = new Variable(dbColumn.getColumnName(), dbColumn.getColumnType(), "private");
-		restParamVar.addAnnotation("PathParam(\""+dbColumn.getColumnName()+"\")");
+		restParamVar.addAnnotation("PathParam(\"" + dbColumn.getColumnName() + "\")");
 		List<Variable> restSvcParams = new ArrayList<Variable>();
 		restSvcParams.add(restParamVar);
- 
+
 		String colName = CodeGenUtil.toUpperCase(dbColumn.getColumnName(), 0);
-		 	 
-		 //delete
-		 String methodName = "delete"+getDomainExt().getName();
-		 if(!dbColumn.isPrimaryKeyColumn() )methodName =  methodName.concat("By").concat(colName);
-		 
-		 Method method = new Method("public","void", methodName, params  , null,true);
-		 method.getThrownExceptions().add("Exception");
-		 getDaoBase().getMethodList().add(method);
-		 getServiceBase().getMethodList().add(method);
-		 
-		 StringBuffer methodBodyDaoImpl =   getDaoImplMethodBody( "true;" , "delete",dbColumn);
-		 Method daoImplMethod = new Method("public","void", methodName, params  , methodBodyDaoImpl.toString());
-		 getDaoBaseImpl().getMethodList().add(daoImplMethod);
-		 daoImplMethod.getThrownExceptions().add("Exception");
-		 
-		 StringBuffer methodBodyServiceImpl = new StringBuffer();
-		 methodBodyServiceImpl.append("\t").append("\t").append(getDaoExt().getNameForVariable()).append(".").append(methodName).append("(").append(dbColumn.getColumnName()).append(")").append(";");
-		 Method serviceMethod = new Method("public","void", methodName, params  , methodBodyServiceImpl.toString());
-		 serviceMethod.getThrownExceptions().add("Exception");
-		 getServiceBaseImpl().getMethodList().add(serviceMethod);
-		 
-		 
-		 StringBuffer methodBodyRestService  = new StringBuffer();
-		 methodBodyRestService.append("\t").append("\t").append(getServiceExt().getNameForVariable()).append(".").append(methodName).append("(").append(dbColumn.getColumnName()).append(")").append(";");
-	
-		 
-		 Method restMethod = new Method("public","void", methodName , restSvcParams  , methodBodyRestService.toString());
-		 restMethod.addAnnotation("DELETE");
-		 
-		 if ( dbColumn.isPrimaryKeyColumn()) {
-				restMethod.addAnnotation("Path(\"/{" + dbColumn.getColumnName() + "}\")");
-			} else if (dbColumn != null && (dbColumn.isRefKeyColumn() || dbColumn.isUniqueKeyColumn())) {
-				restMethod.addAnnotation("Path(\"/" + dbColumn.getColumnName()+"/{"+dbColumn.getColumnName()+"}" + "\")");
-			}
-		 
-		 restMethod.getThrownExceptions().add("Exception");
-		 
-	
-		 
-		 getRestService().getMethodList().add(restMethod);
-		 
+
+		// delete
+		String methodName = "delete" + getDomainExt().getName();
+		if (!dbColumn.isPrimaryKeyColumn())
+			methodName = methodName.concat("By").concat(colName);
+
+		Method method = new Method("public", "void", methodName, params, null, true);
+		method.getThrownExceptions().add("Exception");
+		getDaoBase().getMethodList().add(method);
+		getServiceBase().getMethodList().add(method);
+
+		StringBuffer methodBodyDaoImpl = getDaoImplMethodBody("true;", "delete", dbColumn);
+		
+		Method daoImplMethod = new Method("public", "void", methodName, params, methodBodyDaoImpl.toString());
+		getDaoBaseImpl().getMethodList().add(daoImplMethod);
+		daoImplMethod.getThrownExceptions().add("Exception");
+
+		StringBuffer methodBodyServiceImpl = new StringBuffer().append("\t\t").append(getDaoExt().getNameForVariable()).append(".")
+															   .append(methodName).append("(").append(dbColumn.getColumnName())
+															   .append(")").append(";");
+		
+		Method serviceMethod = new Method("public", "void", methodName, params, methodBodyServiceImpl.toString());
+		serviceMethod.getThrownExceptions().add("Exception");
+		getServiceBaseImpl().getMethodList().add(serviceMethod);
+
+		StringBuffer methodBodyRestService = new StringBuffer();
+		methodBodyRestService.append("\t").append("\t").append(getServiceExt().getNameForVariable()).append(".")
+				.append(methodName).append("(").append(dbColumn.getColumnName()).append(")").append(";");
+
+		Method restMethod = new Method("public", "void", methodName, restSvcParams, methodBodyRestService.toString());
+		restMethod.addAnnotation("DELETE");
+
+		if (dbColumn.isPrimaryKeyColumn()) {
+			restMethod.addAnnotation("Path(\"/{" + dbColumn.getColumnName() + "}\")");
+		} else if (dbColumn != null && (dbColumn.isRefKeyColumn() || dbColumn.isUniqueKeyColumn())) {
+			restMethod.addAnnotation(
+					"Path(\"/" + dbColumn.getColumnName() + "/{" + dbColumn.getColumnName() + "}" + "\")");
+		}
+
+		restMethod.getThrownExceptions().add("Exception");
+
+		getRestService().getMethodList().add(restMethod);
+
 	}
 
 
@@ -686,6 +734,9 @@ public class CgObject {
 		String returnTypeInit = "null" ; 
 		String sql = null ;
 		String methodName = null;
+		
+		String jdbcTemplateMethod = null; 
+		String jdbcTemplateParams = ""; 
  
 		if(dbColumn!=null) {
 			params.add(new Variable(dbColumn.getColumnName(), dbColumn.getColumnType(), "private"));
@@ -708,7 +759,13 @@ public class CgObject {
 			 returnType = "List<"+returnType+">";
 			 returnTypeName = returnTypeName+"List";
 			 returnTypeInit = "new Array"+returnType+"()"; 
+			 jdbcTemplateMethod = "query"; 
+		 }else {
+			 jdbcTemplateMethod =  "queryForObject" ; 
+			 //jdbcTemplateParams = dbColumn.getColumnName();
 		 }
+		 
+		 if(dbColumn!=null) jdbcTemplateParams = dbColumn.getColumnName();
 		 	
 		 //load Method
 		 Method method = new Method("public",returnType, methodName, params  , null,true);
@@ -721,34 +778,35 @@ public class CgObject {
 		 getServiceBase().getMethodList().add(methodService);
 		 
 		 StringBuffer methodBodyDaoImpl = new StringBuffer();
-		 methodBodyDaoImpl.append("\t\t").append("String sql = ").append(sql).append(";\n")
-						  .append("\t\t").append("Connection connection = null ; ").append("\n")
+		 methodBodyDaoImpl.append("\t\t").append("String sql = ").append(sql).append(";\n");
+		 if(!cgParams.isSpringJdbcTemplate()){
+		 methodBodyDaoImpl.append("\t\t").append("Connection connection = null ; ").append("\n")
 						  .append("\t\t").append("PreparedStatement pstmt = null ;").append("\n")
 						  .append("\t\t").append("ResultSet rs = null ;").append("\n")
 						  .append("\t\t").append(returnType).append(" ").append(returnTypeName).append(" = ").append(returnTypeInit).append(";").append("\n")
 						  .append("\t\t").append("try { ").append("\n");
 		methodBodyDaoImpl.append("\t\t\t").append(getConnectionInit()).append("\n");
 		methodBodyDaoImpl.append("\t\t\t").append("pstmt=connection.prepareStatement(sql);").append("\n");
+		
 		if(null !=dbColumn) {
 			methodBodyDaoImpl.append("\t\t\t").append("pstmt.").append("set").append(dbColumn.getColumnType()).append("(1,").append(dbColumn.getColumnName()).append(");").append("\n");
 				
 		}
 						  
-		methodBodyDaoImpl.append("\t\t\t").append("rs=pstmt.executeQuery();").append("\n\n")
-						  .append("\t\t\t").append("while(rs.next()){").append("\n");
+		methodBodyDaoImpl.append("\t\t\t").append("rs=pstmt.executeQuery();").append("\n")
+					     .append("\t\t\t").append("int cnt=0;").append("\n")
+		  			     .append("\t\t\t").append("while(rs.next()){").append("\n");
 						   if(dbColumn==null || dbColumn.isRefKeyColumn()){
-							   methodBodyDaoImpl.append("\t\t\t").append(returnTypeName).append(".add(")
-							                    .append(getDomainHelperExt().getNameForVariable()).append(".get").append(getDomainExt().getName())
-							                    .append("(rs));").append("\n");
+							   methodBodyDaoImpl.append("\t\t\t\t").append(returnTypeName).append(".add(")
+							   					.append(getDomainHelperExt().getNameForVariable()).append(".mapRow(rs,cnt++));\n");
 						   }else{
-							   methodBodyDaoImpl.append("\t\t\t").append(returnTypeName).append(" = ")
-							                    .append(getDomainHelperExt().getNameForVariable()).append(".get").append(getDomainExt().getName())
-							                    .append("(rs);").append("\n");   
+							   methodBodyDaoImpl.append("\t\t\t\t").append(returnTypeName).append(" = ")
+							   				  .append(getDomainHelperExt().getNameForVariable()).append(".mapRow(rs,cnt++);\n");
 						   }
 						  
 						  
-	     methodBodyDaoImpl.append("\t\t\t").append(" ").append("\n")
-						  .append("\t\t\t").append(" ").append("\n")
+	     methodBodyDaoImpl//.append("\t\t\t").append(" ").append("\n")
+						  //.append("\t\t\t").append(" ").append("\n")
 						  .append("\t\t\t").append("}").append("\n")
 						  .append("\t  ").append("} catch(Exception ex) { ").append("\n\n")
 						  .append("\t\t  ").append("throw ex; ").append("\n\n")
@@ -757,6 +815,9 @@ public class CgObject {
 						  .append("\t\t  ").append(getConnectionCleanup("connection")).append("\n")
 						  .append("\t  ").append("}").append("\n");
 		 methodBodyDaoImpl.append("\t").append("\t").append("return ").append(returnTypeName).append(";");
+		} else {
+ 			methodBodyDaoImpl.append("\t\t").append("return getJdbcTemplate().").append(jdbcTemplateMethod).append("(sql, new Object[]{").append(jdbcTemplateParams).append("},").append(getDomainHelperExt().getNameForVariable()).append(");");
+  		}
 		 
 		 Method m = new Method("public",returnType, methodName, params  , methodBodyDaoImpl.toString());
 		 m.getThrownExceptions().add("Exception");

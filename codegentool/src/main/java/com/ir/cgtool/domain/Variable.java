@@ -83,7 +83,7 @@ public class Variable {
 		StringBuffer sb = new StringBuffer();
 		for(String annotation : annotations )sb.append("\t@").append(annotation).append(StringUtil.LINE_SEPARTOR);
 		sb.append("\t").append(getAccess()).append(" ").append(getType()).append(" ").append(getName()).append(" = ")
-				.append(getColInitialization()).append("; ").append(StringUtil.LINE_SEPARTOR)
+				.append(getColInitialization()).append(";").append(StringUtil.LINE_SEPARTOR)
 				.append(StringUtil.LINE_SEPARTOR);
 		return sb.toString();
 

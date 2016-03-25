@@ -252,7 +252,7 @@ public class JavaSource {
 		for (String implClass : implmentionList) {
 			if (i > 0)
 				content.append(", ");
-			content.append(" implements " + implClass).append(" ");
+			content.append("implements " + implClass).append(" ");
 			i++;
 		}
 
@@ -285,12 +285,15 @@ public class JavaSource {
 	}
 
 	private void generateSrcCode() throws IOException {
-		if (getName() == null) return;
+		if (getName() == null){ 
+			return;
+		}
 
 		File fileDirectory = new File(getSourceFolder());
 		if (!fileDirectory.exists()) fileDirectory.mkdirs();
 		
 		File srcFile = new File(getSourceFolder() + "\\" + getName() + ".java");
+		System.out.println("Writing to : "+ srcFile.getAbsolutePath());
 
 		if (!isOverwrite() && srcFile.exists()) return;
 
@@ -438,6 +441,11 @@ public class JavaSource {
 	public void addSupperClass(String className, String fullPath) {
 	    setSuperClassAssociationType("extends" );
 	 	setSuperClassName(className);
+		getImportList().add(fullPath);
+	}
+	
+	public void addImplementation(String className, String fullPath) {
+		getImplmentionList().add(className);
 		getImportList().add(fullPath);
 	}
 	
