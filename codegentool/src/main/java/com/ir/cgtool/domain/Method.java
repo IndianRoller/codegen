@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+import com.ir.cgtool.CGConstants;
 import com.ir.cgtool.util.CodeGenUtil;
 import com.ir.util.StringUtil;
 
@@ -27,6 +28,7 @@ public class Method {
 	
 	private List<String> annotations = new ArrayList<String>();
 	
+	private int sortOrder = 0 ; 
 	
 	public Method(String access, String returnType, String name, List<Variable> params, String body) {
 		super();
@@ -129,7 +131,15 @@ public class Method {
 		annotations.add(annotation);
   	}
 
- 	public String getMethodText() {
+ 	public int getSortOrder() {
+		return sortOrder;
+	}
+
+	public void setSortOrder(int sortOrder) {
+		this.sortOrder = sortOrder;
+	}
+
+	public String generateSrcCode() {
 		StringBuffer sb = new StringBuffer();
 		for(String annotation : annotations )sb.append("\t@").append(annotation).append(StringUtil.LINE_SEPARTOR);
 		sb.append("\t").append(getAccess()).append(" ");
@@ -151,18 +161,18 @@ public class Method {
 		 if(isAbStract()){
 			 sb.append(";");
 		 }else{
-			 sb.append("{")
+			 sb.append(CGConstants.START_OF_SRC)
 			  .append(StringUtil.LINE_SEPARTOR)
 			  .append(StringUtil.isEmpty(getBody())?"":getBody())
 			  .append(StringUtil.LINE_SEPARTOR)
-			  .append("\t").append("}");
+			  .append("\t").append(CGConstants.END_OF_SRC);
 		 }
 		 
-		    sb.append(StringUtil.LINE_SEPARTOR).append(StringUtil.LINE_SEPARTOR);
+		sb.append(StringUtil.LINE_SEPARTOR).append(StringUtil.LINE_SEPARTOR);
  		return sb.toString();
 	}
 
-	public String getMethodTestText() {
+	public String generateTestCode() {
 		StringBuffer sb = new StringBuffer();
 		sb.append("\t").append(getAccess()).append(" ");
 		if(!isConstructor()) sb.append("void").append(" ");

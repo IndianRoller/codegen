@@ -351,7 +351,7 @@ public class JavaSource {
 		StringBuffer content = new StringBuffer();
 
 		for (Method method : getMethodList()) {
-			content.append(method.getMethodText());
+			content.append(method.generateSrcCode());
 		}
 
 		return content.toString();
@@ -366,7 +366,7 @@ public class JavaSource {
 
 		for (Method method : getMethodList()) {
 			if(method.isConstructor() || method.isAbStract()) continue; 
-			content.append(method.getMethodTestText());
+			content.append(method.generateTestCode());
 		}
 
 		return content.toString();

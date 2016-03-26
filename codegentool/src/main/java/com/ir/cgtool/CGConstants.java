@@ -33,5 +33,7 @@ public class CGConstants {
 	public static final String SERVICE_CONFIG_XML = "service-config.xml";
 
 	public static final String END_OF_SRC = "}";
+	
+	public static final String START_OF_SRC = "{";
 
 }
